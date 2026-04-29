@@ -180,39 +180,5 @@ public class HalfMapCreator {
 
 
 
-    private int floodFillCount(EClientTerrain[][] grid, int sx, int sy) {
-
-        boolean[][] visited = new boolean[height][width];
-        Queue<int[]> q = new ArrayDeque<>();
-
-        q.add(new int[]{sx, sy});
-        visited[sy][sx] = true;
-
-        int count = 0;
-
-        while (!q.isEmpty()) {
-            int[] p = q.poll();
-            count++;
-
-            int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
-
-            for (int[] d : dirs) {
-                int nx = p[0] + d[0];
-                int ny = p[1] + d[1];
-
-                if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-                if (visited[ny][nx]) continue;
-                if (grid[ny][nx] == EClientTerrain.Water) continue;
-
-                visited[ny][nx] = true;
-                q.add(new int[]{nx, ny});
-            }
-        }
-
-        return count;
-    }
-
- 
-
     public record Position(int x, int y) {}
 }

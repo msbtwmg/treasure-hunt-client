@@ -1,8 +1,12 @@
 package client.map;
 
 import java.util.ArrayDeque;
+import java.util.Map;
 import java.util.Queue;
 
+import client.AI.PathFinder;
+import client.map.model.ClientFullMapNode;
+import client.map.model.EClientPositionState;
 import client.map.model.EClientTerrain;
 
 public class MapHelper {
@@ -137,4 +141,25 @@ public class MapHelper {
     public static boolean isEdgeField(int x, int y, int width, int height) {
         return x == 0 || y == 0 || x == width - 1 || y == height - 1;
     }
+    
+    // TODO: statt ws25 gamestate, position direkt rausholen für weniger visibility
+    public static ClientFullMapNode findMyPosition(Map<PathFinder.Position, ClientFullMapNode> nodes) {
+
+        if (nodes == null || nodes.isEmpty()) {
+            return null;
+        }
+
+        for (ClientFullMapNode node : nodes.values()) {
+            var pos = node.getPlayerPositionState();
+
+            if (pos == EClientPositionState.MyPlayerPosition ||
+                pos == EClientPositionState.BothPlayerPosition) {
+                return node;
+            }
+        }
+
+        return null;
+    }
+    
+
 }

@@ -29,8 +29,6 @@ public class ClientNetwork {
 	private final WebClient baseWebClient;
 	private final String serverBaseUrl; 
 	private final String gameId;
-	private String playerId;
-
 	
 	public ClientNetwork(ClientConfig startup) {
 		

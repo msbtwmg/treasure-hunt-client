@@ -6,10 +6,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import client.AI.PathFinder;
 import client.game.model.ClientGameState;
 import client.game.model.EClientGameState;
+import client.game.model.EClientMove;
+import client.map.model.ClientFullMapNode;
 import client.map.model.ClientHalfMapNode;
 import client.network.ClientNetwork;
+import client.network.converter.GameStateConverter;
 import client.network.converter.HalfMapConverter;
 
 public class Game {
@@ -20,10 +24,13 @@ public class Game {
     private final String playerId;
     private final List<ClientHalfMapNode> halfMap;
 
+    private final PathFinder pathFinder = new PathFinder();
+
     private volatile boolean running = true;
     private final AtomicBoolean started = new AtomicBoolean(false);
 
     private boolean sentMap = false;
+    private boolean moveSent = false;
 
     private static final long MIN_INTERVAL = 400;
     private long lastRequest = 0;
@@ -47,7 +54,7 @@ public class Game {
             return;
         }
 
-        logger.info("Starting minimal game loop (map only)");
+        logger.info("Starting game loop");
 
         while (running) {
             try {
@@ -55,6 +62,8 @@ public class Game {
                 throttle();
 
                 ClientGameState gameState = network.getGameState(playerId);
+
+                moveSent = false; // reset per state
 
                 handleGameState(gameState);
 
@@ -69,39 +78,62 @@ public class Game {
 
     /**
      * GameState handling
-     * @param gameState
      */
-
     private void handleGameState(ClientGameState gameState) {
 
         EClientGameState myState = gameState.getMyGameState();
 
         if (myState == null) {
-            logger.debug("GameState not ready yet");
+            logger.debug("My GameState not available yet");
             return;
         }
 
         if (myState == EClientGameState.Won || myState == EClientGameState.Lost) {
-            logger.info("Game finished: {}", myState);
+            logger.info("Game finished for me: {}", myState);
             running = false;
             return;
         }
 
         if (myState == EClientGameState.MustAct) {
-            sendMapIfNeeded();
+            act(gameState);
         } else {
             logger.debug("~ Waiting {}", myState);
         }
     }
 
     /**
-     * Makes sure the map is only sent once. 
+     * Main action logic (map + moves)
+     */
+    private void act(ClientGameState gameState) {
+
+        // send map once
+        if (!sentMap) {
+            sendMapIfNeeded();
+            return;
+        }
+
+        // update PathFinder with current map
+        pathFinder.setNodes(gameState.getMap().getMapNodes());
+
+        // decide next move
+        EClientMove move = pathFinder.decideNextMove(gameState);
+
+        if (move == null) {
+            logger.warn("No move decided");
+            return;
+        }
+
+        sendMove(move);
+    }
+
+    /**
+     * Send map once
      */
     private void sendMapIfNeeded() {
 
         if (sentMap) return;
 
-        logger.info("~Sending HalfMap");
+        logger.info("~ Sending HalfMap");
 
         network.sendHalfMap(
                 HalfMapConverter.toServerHalfMap(playerId, halfMap)
@@ -111,8 +143,23 @@ public class Game {
     }
 
     /**
-     * Timing
-     * @throws InterruptedException
+     * Send move once per GameState
+     */
+    private void sendMove(EClientMove move) {
+
+        if (moveSent) return;
+
+        moveSent = true;
+
+        network.sendMove(
+                GameStateConverter.toServerClientMove(playerId, move)
+        );
+
+        logger.debug("Move sent: {}", move);
+    }
+
+    /**
+     * Timing control
      */
     private void throttle() throws InterruptedException {
 
