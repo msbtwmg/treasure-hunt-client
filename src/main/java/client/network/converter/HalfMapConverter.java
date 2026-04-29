@@ -1,18 +1,14 @@
 package client.network.converter;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import client.map.HalfMapCreator.Position;
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
-
 import messagesbase.messagesfromclient.ETerrain;
 import messagesbase.messagesfromclient.PlayerHalfMap;
 import messagesbase.messagesfromclient.PlayerHalfMapNode;

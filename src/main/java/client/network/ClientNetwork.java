@@ -9,12 +9,16 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import client.game.model.ClientGameState;
 import client.main.ClientConfig;
+import client.network.converter.GameStateConverter;
 import messagesbase.ResponseEnvelope;
 import messagesbase.UniquePlayerIdentifier;
 import messagesbase.messagesfromclient.ERequestState;
 import messagesbase.messagesfromclient.PlayerHalfMap;
+import messagesbase.messagesfromclient.PlayerMove;
 import messagesbase.messagesfromclient.PlayerRegistration;
+import messagesbase.messagesfromserver.GameState;
 import reactor.core.publisher.Mono;
 
 public class ClientNetwork {
@@ -34,9 +38,6 @@ public class ClientNetwork {
 		this.serverBaseUrl = startup.getServerBaseUrl();
 		this.gameId = startup.getGameId();
 
-		
-		//  WebClient configuration, will be reused/customized for each
-		// individual endpoint
 		
 		this.baseWebClient = WebClient.builder().baseUrl(serverBaseUrl + "/games")
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE) // we send XML (cf. network protocol)
@@ -106,6 +107,57 @@ public class ClientNetwork {
 		} else {
 			logger.info("HalfMap successfully sent");
 		}
+	}
+	
+	public void sendMove(PlayerMove playerMove) {
+			
+			Mono<ResponseEnvelope<UniquePlayerIdentifier>> webAccess = baseWebClient
+					.method(HttpMethod.POST)
+					.uri("/" + gameId + "/moves")
+					.body(BodyInserters.fromValue(playerMove))
+					.retrieve()
+					.bodyToMono(new ParameterizedTypeReference<ResponseEnvelope<UniquePlayerIdentifier>>() {}); 		
+			
+			ResponseEnvelope<UniquePlayerIdentifier> resultPlayerMove = webAccess.block();
+			
+			if (resultPlayerMove.getState() == ERequestState.Error) {
+		
+				logger.error("Move rejected: " + resultPlayerMove.getExceptionMessage());
+		        throw new IllegalStateException("SEND MOVE EXCEPTION");
+	
+			} else {
+			
+				logger.info("PlayerMove successfully sent");
+			}
+		}
+	
+	public ClientGameState getGameState(String playerId) throws Exception {
+		
+		if (playerId == null) throw new IllegalArgumentException("Player ID is null.");
+
+		// the bodyToMono(...) part specifies the expected object type to be returned by the server
+		Mono<ResponseEnvelope<GameState>> webAccess = baseWebClient
+				.method(HttpMethod.GET)
+				.uri("/" + gameId + "/states/" + playerId)
+				.retrieve()
+				// expected object type to be returned by the server
+				.bodyToMono(new ParameterizedTypeReference<ResponseEnvelope<GameState>>() {});
+		 
+		ResponseEnvelope<GameState> requestResult = webAccess.block();
+
+		if (requestResult.getState() == ERequestState.Error) {
+			logger.error("Client error, message: " + requestResult.getExceptionMessage());
+	        throw new IllegalStateException("ILLEGAL GAME STATE EXCEPTION");
+
+		}
+		
+		ClientGameState updatedClientGameState = GameStateConverter.toClientGameState(requestResult.getData().get(), playerId);
+			
+		logger.debug("Current Game state:  {}", updatedClientGameState);
+		
+		
+		return updatedClientGameState; 
+		
 	}
 	
 	

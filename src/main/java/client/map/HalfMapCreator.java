@@ -38,8 +38,14 @@ public class HalfMapCreator {
             resetFort();
 
             EClientTerrain[][] grid = createTerrainGrid();
+            
 
             if (!placeFortSmart(grid)) continue;
+            
+            if (!MapHelper.isConnected(grid)) continue;
+            if (!MapHelper.isBorderAccessible(grid)) continue;
+            if (!MapHelper.isTerrainValid(grid, minGrass, minWater, minMountain)) continue;
+
 
             Map<Position, ClientHalfMapNode> nodeMap = createNodeMap(grid);
 
@@ -149,12 +155,7 @@ public class HalfMapCreator {
 
         score += grassNeighbors * 2;
 
-        // connectivity check
-        int reachable = floodFillCount(grid, x, y);
-        if (reachable < total / 2) return -1;
-
-        score += reachable / 5;
-
+       
         return score;
     }
 

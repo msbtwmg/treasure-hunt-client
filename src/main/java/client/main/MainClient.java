@@ -1,21 +1,16 @@
 package client.main;
 
-
+import client.game.Game;
 import client.map.HalfMapCreator;
 import client.map.model.ClientHalfMapNode;
 import client.network.ClientNetwork;
-import client.network.converter.HalfMapConverter;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import exceptions.InvalidArgumentsException;
-import messagesbase.messagesfromclient.PlayerHalfMap;
-
 
 public class MainClient {
 	
@@ -26,10 +21,7 @@ public class MainClient {
     private static String USERNAME  = "REDACTED";
     
 
-	
-
 	public static void main(String[] args) {
-
 
         try {
             if (args.length < 3) {
@@ -40,42 +32,51 @@ public class MainClient {
             final String mode = args[0];
             final String serverBaseUrl = args[1];
             final String gameId = args[2];
-            
-     
 
-            ClientConfig config =  new ClientConfig(mode, serverBaseUrl, gameId, FIRSTNAME, LASTNAME, USERNAME);
-            
-            /** 
+            /**
+             * Creating config
+             */
+            ClientConfig config = new ClientConfig(
+                    mode,
+                    serverBaseUrl,
+                    gameId,
+                    FIRSTNAME,
+                    LASTNAME,
+                    USERNAME
+            );
+
+            /**
              * Registering the player
              */
-            ClientNetwork network = new ClientNetwork(config); 
+            ClientNetwork network = new ClientNetwork(config);
             String playerId = network.registerPlayer().getUniquePlayerID();
-            
-            /** 
-             * 
-             *Creating the map
+
+            logger.info("Registered player: {}", playerId);
+
+            /**
+             * Creating the map
              */
             HalfMapCreator creator = new HalfMapCreator();
             List<ClientHalfMapNode> nodes = creator.createHalfMap();
-            
+
+            logger.info("HalfMap successfully created");
+
             /**
-             * Convert and send the map for the server
+             * Starting the game loop
+             * (Game class handles sending the map)
              */
-            PlayerHalfMap halfMap = HalfMapConverter.toServerHalfMap(playerId, nodes);
-            
+            Game game = new Game(network, playerId, nodes);
 
-            network.sendHalfMap(halfMap);
-
+            logger.info("Starting game...");
+            game.play();
 
         }
         catch (InvalidArgumentsException e) {
             logger.error("Invalid Arguments: {}", e.getMessage());
-        } catch (Exception e) {
-            logger.error("Fatal error in main", e);
         }
-        
+        catch (Exception e) {
+            logger.error("Fatal error in main", e);
+            System.exit(1); 
+        }
 	}
-	
-	
-	
 }
