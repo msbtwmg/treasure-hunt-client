@@ -168,6 +168,5 @@ public final class GameStateConverter {
         final EMove movement = toServerMove(move);
         return PlayerMove.of(playerId, movement);
     }
-
    
 }
