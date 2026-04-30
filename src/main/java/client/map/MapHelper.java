@@ -6,8 +6,10 @@ import java.util.Queue;
 
 import client.AI.PathFinder;
 import client.map.model.ClientFullMapNode;
+import client.map.model.EClientFortState;
 import client.map.model.EClientPositionState;
 import client.map.model.EClientTerrain;
+import client.map.model.EClientTreasureState;
 
 public class MapHelper {
 
@@ -158,6 +160,67 @@ public class MapHelper {
         }
 
         return null;
+    }
+    
+    public static void printMap(Map<PathFinder.Position, ClientFullMapNode> nodes) {
+
+        if (nodes == null || nodes.isEmpty()) {
+            System.out.println("Map is empty");
+            return;
+        }
+
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+        int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+
+        for (PathFinder.Position p : nodes.keySet()) {
+            minX = Math.min(minX, p.x());
+            maxX = Math.max(maxX, p.x());
+            minY = Math.min(minY, p.y());
+            maxY = Math.max(maxY, p.y());
+        }
+
+        System.out.println("\n=== MAP DEBUG ===");
+
+        for (int y = minY; y <= maxY; y++) {
+            for (int x = minX; x <= maxX; x++) {
+
+                ClientFullMapNode node = nodes.get(new PathFinder.Position(x, y));
+
+                if (node == null) {
+                    System.out.print(" ? ");
+                    continue;
+                }
+
+                char c;
+
+                // Player
+                if (node.getPlayerPositionState() == EClientPositionState.MyPlayerPosition ||
+                    node.getPlayerPositionState() == EClientPositionState.BothPlayerPosition) {
+                    c = 'P';
+                }
+                // Fort
+                else if (node.getFortState() == EClientFortState.EnemyFortPresent) {
+                    c = 'F';
+                }
+                // Treasure
+                else if (node.getTreasureState() == EClientTreasureState.MyTreasureIsPresent) {
+                    c = 'T';
+                }
+                // Terrain
+                else {
+                    c = switch (node.getTerrain()) {
+                        case Grass -> '.';
+                        case Mountain -> 'M';
+                        case Water -> 'W';
+                    };
+                }
+
+                System.out.print(" " + c + " ");
+            }
+            System.out.println();
+        }
+
+        System.out.println("=================\n");
     }
     
 

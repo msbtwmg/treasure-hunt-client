@@ -38,7 +38,7 @@ public class Game {
 	    private long lastRequest = 0;
 
 	    private int moveCount = 0;
-	    private static final int MAX_MOVES = 150;
+	    private static final int MAX_MOVES = 360;
 
 	    private int lastX = -1;
 	    private int lastY = -1;
@@ -152,7 +152,7 @@ public class Game {
 
 	      
 	        if (move == null || !isMoveSafe(gameState, me, move)) {
-	            move = pathFinder.fallbackMove(me);
+	            move = pathFinder.fallbackMove(me, gameState.collectedTreasure());
 	        }
 
 	        if (move == null || !isMoveSafe(gameState, me, move)) {

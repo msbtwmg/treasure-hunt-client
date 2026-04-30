@@ -18,7 +18,7 @@ public class HalfMapCreator {
     private int fortPositionX = -1;
     private int fortPositionY = -1;
 
-    private static final double MIN_MOUNTAIN = 0.14;
+    private static final double MIN_MOUNTAIN = 0.12;
     private static final double MIN_GRASS = 0.48;
     private static final double MIN_WATER = 0.14;
 
@@ -39,12 +39,15 @@ public class HalfMapCreator {
 
             EClientTerrain[][] grid = createTerrainGrid();
             
-
-            if (!placeFortSmart(grid)) continue;
+            smoothTerrain(grid);
             
+            if (!placeFortSmart(grid)) continue;
+
             if (!MapHelper.isConnected(grid)) continue;
             if (!MapHelper.isBorderAccessible(grid)) continue;
             if (!MapHelper.isTerrainValid(grid, minGrass, minWater, minMountain)) continue;
+            
+            if (evaluateMap(grid) > 25) continue;
 
 
             Map<Position, ClientHalfMapNode> nodeMap = createNodeMap(grid);
@@ -86,7 +89,48 @@ public class HalfMapCreator {
 
         return grid;
     }
+    
+    //Soft clustering logic
+    private void smoothTerrain(EClientTerrain[][] grid) {
+        for (int i = 0; i < 10; i++) {
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
 
+            int nx = Math.max(0, Math.min(width - 1, x + random.nextInt(3) - 1));
+            int ny = Math.max(0, Math.min(height - 1, y + random.nextInt(3) - 1));
+
+            EClientTerrain temp = grid[y][x];
+            grid[y][x] = grid[ny][nx];
+            grid[ny][nx] = temp;
+        }
+    }
+
+    // checks how efficient the map is for movement
+    private int evaluateMap(EClientTerrain[][] grid) {
+        int penalty = 0;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+
+                if (grid[y][x] == EClientTerrain.Water) continue;
+
+                int walkableNeighbors = 0;
+
+                if (x > 0 && grid[y][x-1] != EClientTerrain.Water) walkableNeighbors++;
+                if (x < width-1 && grid[y][x+1] != EClientTerrain.Water) walkableNeighbors++;
+                if (y > 0 && grid[y-1][x] != EClientTerrain.Water) walkableNeighbors++;
+                if (y < height-1 && grid[y+1][x] != EClientTerrain.Water) walkableNeighbors++;
+
+                // penalty  dead ends
+                if (walkableNeighbors <= 1) penalty += 5;
+
+            }
+        }
+
+        return penalty;
+    }
+
+    
    
     private void resetFort() {
         fortPositionX = -1;
@@ -141,6 +185,12 @@ public class HalfMapCreator {
 
         int score = 0;
 
+        // Prefer central positions
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int distToCenter = Math.abs(x - centerX) + Math.abs(y - centerY);
+        score -= distToCenter;
+
         // Avoid placing fort on border 
         if (x == 0 || y == 0 || x == width - 1 || y == height - 1) {
             score -= 5;
@@ -161,7 +211,6 @@ public class HalfMapCreator {
 
         score += grassNeighbors * 2;
 
-       
         return score;
     }
 
