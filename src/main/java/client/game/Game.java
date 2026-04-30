@@ -12,164 +12,217 @@ import client.game.model.EClientGameState;
 import client.game.model.EClientMove;
 import client.map.model.ClientFullMapNode;
 import client.map.model.ClientHalfMapNode;
+import client.map.model.EClientTerrain;
 import client.network.ClientNetwork;
 import client.network.converter.GameStateConverter;
 import client.network.converter.HalfMapConverter;
 
+
 public class Game {
 
-    private static final Logger logger = LoggerFactory.getLogger(Game.class);
+	    private static final Logger logger = LoggerFactory.getLogger(Game.class);
 
-    private final ClientNetwork network;
-    private final String playerId;
-    private final List<ClientHalfMapNode> halfMap;
+	    private final ClientNetwork network;
+	    private final String playerId;
+	    private final List<ClientHalfMapNode> halfMap;
 
-    private final PathFinder pathFinder = new PathFinder();
+	    private final PathFinder pathFinder = new PathFinder();
 
-    private volatile boolean running = true;
-    private final AtomicBoolean started = new AtomicBoolean(false);
+	    private volatile boolean running = true;
+	    private final AtomicBoolean started = new AtomicBoolean(false);
 
-    private boolean sentMap = false;
-    private boolean moveSent = false;
+	    private boolean sentMap = false;
+	    private boolean moveSentForCurrentState = false;
 
-    private static final long MIN_INTERVAL = 400;
-    private long lastRequest = 0;
+	    private static final long MIN_INTERVAL = 400L;
+	    private long lastRequest = 0;
 
-    public Game(ClientNetwork network,
-                String playerId,
-                List<ClientHalfMapNode> halfMap) {
+	    private int moveCount = 0;
+	    private static final int MAX_MOVES = 150;
 
-        this.network = network;
-        this.playerId = playerId;
-        this.halfMap = halfMap;
-    }
+	    private int lastX = -1;
+	    private int lastY = -1;
 
-    /** 
-     * Main Game Loop
-     */
-    public void play() {
+	    public Game(ClientNetwork network, String playerId, List<ClientHalfMapNode> halfMap) {
 
-        if (!started.compareAndSet(false, true)) {
-            logger.warn("Game already started");
-            return;
-        }
+	        this.network = network;
+	        this.playerId = playerId;
+	        this.halfMap = halfMap;
+	    }
 
-        logger.info("Starting game loop");
+	    public void play() {
 
-        while (running) {
-            try {
+	        if (!started.compareAndSet(false, true)) {
+	            logger.warn("Game already started");
+	            return;
+	        }
 
-                throttle();
+	        logger.info("Starting game loop");
 
-                ClientGameState gameState = network.getGameState(playerId);
+	        while (running) {
+	            try {
 
-                moveSent = false; // reset per state
+	            	long now = System.currentTimeMillis();
+	     	        long diff = now - lastRequest;
 
-                handleGameState(gameState);
+	     	        if (lastRequest != 0 && diff < MIN_INTERVAL) {
+	     	            Thread.sleep(MIN_INTERVAL - diff);
+	     	        }
 
-            } catch (Exception e) {
-                logger.error("Error in game loop", e);
-                running = false;
-            }
-        }
 
-        logger.info("Game stopped.");
-    }
+	                ClientGameState gameState = network.getGameState(playerId);
+	                
 
-    /**
-     * GameState handling
-     */
-    private void handleGameState(ClientGameState gameState) {
 
-        EClientGameState myState = gameState.getMyGameState();
+	                moveSentForCurrentState = false;
+	     	        lastRequest = System.currentTimeMillis();
 
-        if (myState == null) {
-            logger.debug("My GameState not available yet");
-            return;
-        }
 
-        if (myState == EClientGameState.Won || myState == EClientGameState.Lost) {
-            logger.info("Game finished for me: {}", myState);
-            running = false;
-            return;
-        }
+	                handleGameState(gameState);
 
-        if (myState == EClientGameState.MustAct) {
-            act(gameState);
-        } else {
-            logger.debug("~ Waiting {}", myState);
-        }
-    }
+	            } catch (Exception e) {
+	                logger.error("Error in game loop", e);
+	                running = false;
+	                System.exit(0);
+	            }
+	        }
 
-    /**
-     * Main action logic (map + moves)
-     */
-    private void act(ClientGameState gameState) {
+	        logger.info("Play loop ended, client stopped.");
+	    }
 
-        // send map once
-        if (!sentMap) {
-            sendMapIfNeeded();
-            return;
-        }
+	    private void handleGameState(ClientGameState gameState) {
 
-        // update PathFinder with current map
-        pathFinder.setNodes(gameState.getMap().getMapNodes());
+	        EClientGameState myState = gameState.getMyGameState();
 
-        // decide next move
-        EClientMove move = pathFinder.decideNextMove(gameState);
+	        if (myState == null) return;
 
-        if (move == null) {
-            logger.warn("No move decided");
-            return;
-        }
+	        if (myState == EClientGameState.Won || myState == EClientGameState.Lost) {
+	            logger.info("Game finished: {}", myState);
+	            running = false;
+	            return;
+	        }
 
-        sendMove(move);
-    }
+	        if (myState == EClientGameState.MustAct) {
+	            act(gameState);
+	        }
+	    }
 
-    /**
-     * Send map once
-     */
-    private void sendMapIfNeeded() {
+	    private void act(ClientGameState gameState) {
 
-        if (sentMap) return;
+	        long start = System.currentTimeMillis();   
 
-        logger.info("~ Sending HalfMap");
+	       
+	        if (moveCount > MAX_MOVES) {
+	            logger.error("Too many moves, STOPPING");
+	            running = false;
+	            return;
+	        }
 
-        network.sendHalfMap(
-                HalfMapConverter.toServerHalfMap(playerId, halfMap)
-        );
+	        // Sending the half map ONCE
+	        if (!sentMap) {
+	            sendMap();
+	            logger.debug("Map sent ({} ms)", System.currentTimeMillis() - start);
+	            return;
+	        }
 
-        sentMap = true;
-    }
+	      
+	        if (gameState.getMap() == null) {
+	            logger.debug("FullMap not available yet");
+	            return;
+	        }
 
-    /**
-     * Send move once per GameState
-     */
-    private void sendMove(EClientMove move) {
+	        // Updating Pathfinder 
+	        pathFinder.setNodes(gameState.getMap().getMapNodes());
 
-        if (moveSent) return;
+	        ClientFullMapNode me = pathFinder.findMyPosition();
+	        if (me == null) {
+	            logger.warn("My position unknown");
+	            return;
+	        }
 
-        moveSent = true;
+	        int x = me.getX();
+	        int y = me.getY();
 
-        network.sendMove(
-                GameStateConverter.toServerClientMove(playerId, move)
-        );
+	        if (x == lastX && y == lastY) {
+	            logger.debug("Still on same tile (possible stuck)");
+	        }
 
-        logger.debug("Move sent: {}", move);
-    }
+	        
+	        EClientMove move = pathFinder.decideNextMove(gameState);
 
-    /**
-     * Timing control
-     */
-    private void throttle() throws InterruptedException {
+	      
+	        if (move == null || !isMoveSafe(gameState, me, move)) {
+	            move = pathFinder.fallbackMove(me);
+	        }
 
-        long now = System.currentTimeMillis();
-        long diff = now - lastRequest;
+	        if (move == null || !isMoveSafe(gameState, me, move)) {
+	            logger.warn("No safe move possible");
+	            return;
+	        }
 
-        if (lastRequest != 0 && diff < MIN_INTERVAL) {
-            Thread.sleep(MIN_INTERVAL - diff);
-        }
+	        lastX = x;
+	        lastY = y;
 
-        lastRequest = System.currentTimeMillis();
-    }
+	     
+	        sendMove(move);
+
+	        logger.info("Has treasure in inventory: {}", gameState.collectedTreasure());
+	        long duration = System.currentTimeMillis() - start;
+
+	        logger.debug("Decision took {} ms", duration);
+
+	        if (duration > 4500) {
+	            logger.warn("Close to timeout!!!");
+	        }
+	    }
+	    
+	    
+	    private void sendMap() {
+	        if (sentMap) return;
+
+	        logger.info("Sending HalfMap");
+
+	        network.sendHalfMap(
+	            HalfMapConverter.toServerHalfMap(playerId, halfMap)
+	        );
+
+	        sentMap = true;
+	    }
+
+	    private void sendMove(EClientMove move) {
+
+	        if (moveSentForCurrentState) return;
+
+	        moveSentForCurrentState = true;
+	        moveCount++;
+
+	        network.sendMove(
+	            GameStateConverter.toServerClientMove(playerId, move)
+	        );
+
+	        logger.debug("Move: {}", move);
+	    }
+
+	    private boolean isMoveSafe(ClientGameState gameState, ClientFullMapNode me,  EClientMove move) {
+		
+			int x = me.getX();
+			int y = me.getY();
+			
+			int nx = x;
+			int ny = y;
+			
+			switch (move) {
+			case Right -> nx++;
+			case Left  -> nx--;
+			case Down  -> ny++;
+			case Up    -> ny--;
+			}
+			
+			ClientFullMapNode target = pathFinder.getNode(nx, ny);
+			
+			return target != null && target.getTerrain() != EClientTerrain.Water;
+		}
+
+	  
+	
 }

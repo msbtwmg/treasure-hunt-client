@@ -22,7 +22,7 @@ import messagesbase.messagesfromserver.GameState;
 import reactor.core.publisher.Mono;
 
 public class ClientNetwork {
-	private static Logger logger = LoggerFactory.getLogger(ClientNetwork.class);
+	private static final Logger logger = LoggerFactory.getLogger(ClientNetwork.class);
 
 
 	private final ClientConfig startup;

@@ -15,9 +15,11 @@ public class MapHelper {
         {1, 0}, {-1, 0}, {0, 1}, {0, -1}
     };
 
-    /**
-     * Checks if all walkable fields are connected (no islands)
-     */
+    /** 
+	 * Making sure there are no islands and all walkable fields are reachable  -> floodfill algorithm
+	 * @param grid
+	 * @return
+	 */
     public static boolean isConnected(EClientTerrain[][] grid) {
 
         int height = grid.length;
@@ -70,10 +72,10 @@ public class MapHelper {
         return reached == walkableFields;
     }
 
-    /**
-     * Check if >=  51 % of  edge is walkable
-     */
     
+    /**
+     * Check if >=  51% of  edge is accessible
+     */
     public static boolean isBorderAccessible(EClientTerrain[][] grid) {
 
         int width = grid[0].length;
@@ -125,9 +127,8 @@ public class MapHelper {
                mountain >= minMountain;
     }
 
-    /**
-     * Checks if terrain is walkable
-     */
+
+
     public static boolean isWalkable(EClientTerrain terrain) {
         return switch (terrain) {
             case Grass, Mountain -> true;
@@ -135,9 +136,7 @@ public class MapHelper {
         };
     }
 
-    /**
-     * Checks if coordinate is on edge
-     */
+  
     public static boolean isEdgeField(int x, int y, int width, int height) {
         return x == 0 || y == 0 || x == width - 1 || y == height - 1;
     }

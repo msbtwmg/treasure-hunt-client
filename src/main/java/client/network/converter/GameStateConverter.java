@@ -28,23 +28,26 @@ public final class GameStateConverter {
 
 	
 	private GameStateConverter() {}
+	/**
+	 * Converts the server GameState into a client version ClientGameState
+	 *
+	 * @param gameState server gamestate
+	 * @param playerId current player's ID
+	 * @return converted client game state
+	 */
 	
 	public static ClientGameState toClientGameState(GameState gameState, String playerId) {
 
 	    logger.debug("Converting GameState {}", gameState.getGameStateId());
 
-	    /**
-	     * Map conversion
-	     */
+	    // Map conversion
 	    Set<ClientFullMapNode> nodes = gameState.getMap().getMapNodes().stream()
 	            .map(GameStateConverter::toClientNode)
 	            .collect(Collectors.toSet());
 
 	    ClientFullMap fullMap = new ClientFullMap(nodes);
 
-	    /**
-	     * Position
-	     */
+	    
 	    
 	    int x = -1;
 	    int y = -1;
@@ -65,9 +68,7 @@ public final class GameStateConverter {
 	        logger.warn("My position not found in FullMap yet");
 	    }
 
-	    /**
-	     * Player State
-	     */
+	    // PlayerState conversion
 	    EClientGameState myGameState = null;
 	    boolean hasTreasure = false;
 
@@ -77,7 +78,7 @@ public final class GameStateConverter {
 	            myGameState = toClientGameState(ps.getState());
 	            hasTreasure = ps.hasCollectedTreasure();
 
-	            logger.debug("PlayerState converted: state={}, treasure={}", myGameState, hasTreasure);
+	            logger.debug("PlayerState converted");
 	            break;
 	        }
 	    }
@@ -93,7 +94,6 @@ public final class GameStateConverter {
 	    );
 	}
 	
-        
     private static ClientFullMapNode toClientNode(FullMapNode n) {
         return new ClientFullMapNode(
             n.getX(),
@@ -145,10 +145,6 @@ public final class GameStateConverter {
 	        case MustWait -> EClientGameState.MustWait;
 	    };
 	}
-	
-	/**
-	 * MOVE 
-	 */
 	
     public static EClientMove toClientMove(EMove move) {
         return switch (move) {

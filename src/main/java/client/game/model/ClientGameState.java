@@ -31,10 +31,10 @@ public class ClientGameState {
 		return x;
 	}
 
-
-	  public int getY() {
-		  return y;
-	  }
+	
+	public int getY() {
+		return y;
+	}
 
 
 	public ClientFullMap getMap() {

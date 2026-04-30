@@ -14,7 +14,7 @@ import exceptions.InvalidArgumentsException;
 
 public class MainClient {
 	
-	private static Logger logger = LoggerFactory.getLogger(MainClient.class);
+	private static final Logger logger = LoggerFactory.getLogger(MainClient.class);
 	
     private static String FIRSTNAME = "REDACTED";
     private static String LASTNAME  = "REDACTED";
@@ -33,9 +33,7 @@ public class MainClient {
             final String serverBaseUrl = args[1];
             final String gameId = args[2];
 
-            /**
-             * Creating config
-             */
+         
             ClientConfig config = new ClientConfig(
                     mode,
                     serverBaseUrl,
@@ -45,29 +43,22 @@ public class MainClient {
                     USERNAME
             );
 
-            /**
-             * Registering the player
-             */
+          
             ClientNetwork network = new ClientNetwork(config);
             String playerId = network.registerPlayer().getUniquePlayerID();
 
             logger.info("Registered player: {}", playerId);
 
-            /**
-             * Creating the map
-             */
+           
             HalfMapCreator creator = new HalfMapCreator();
             List<ClientHalfMapNode> nodes = creator.createHalfMap();
 
             logger.info("HalfMap successfully created");
 
-            /**
-             * Starting the game loop
-             * (Game class handles sending the map)
-             */
+            //Game sends the half map before starting loop
             Game game = new Game(network, playerId, nodes);
 
-            logger.info("Starting game...");
+            logger.info("~~~Starting game~~~~");
             game.play();
 
         }
@@ -76,7 +67,6 @@ public class MainClient {
         }
         catch (Exception e) {
             logger.error("Fatal error in main", e);
-            System.exit(1); 
         }
 	}
 }

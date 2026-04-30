@@ -18,7 +18,7 @@ public class HalfMapCreator {
     private int fortPositionX = -1;
     private int fortPositionY = -1;
 
-    private static final double MIN_MOUNTAIN = 0.10;
+    private static final double MIN_MOUNTAIN = 0.14;
     private static final double MIN_GRASS = 0.48;
     private static final double MIN_WATER = 0.14;
 
@@ -49,7 +49,7 @@ public class HalfMapCreator {
 
             Map<Position, ClientHalfMapNode> nodeMap = createNodeMap(grid);
 
-            logger.info("Valid map created on attempt {}", attempt);
+            logger.debug("Valid map created on attempt {}", attempt);
 
          
             return List.copyOf(nodeMap.values());
@@ -59,8 +59,8 @@ public class HalfMapCreator {
     }
 
     /**
-     * Generating the terrains
-     * @return
+     * Generating the randomized terrain grid + minimum distribution of grass water and mountain 
+     * @return grid that represents the terrains
      */
 
     private EClientTerrain[][] createTerrainGrid() {
@@ -87,11 +87,7 @@ public class HalfMapCreator {
         return grid;
     }
 
- 
-    /**
-     * Fort Placement
-     */
-
+   
     private void resetFort() {
         fortPositionX = -1;
         fortPositionY = -1;
@@ -118,9 +114,10 @@ public class HalfMapCreator {
             return false;
         }
 
-        // sort by score
+        
         candidates.sort((a, b) -> Integer.compare(b[2], a[2]));
 
+        // Select randomly from top 30 % best positions
         int cutoff = Math.max(1, candidates.size() * 3 / 10);
         int[] chosen = candidates.get(random.nextInt(cutoff));
 
@@ -131,11 +128,20 @@ public class HalfMapCreator {
         return true;
     }
 
+    /**
+     * Rates how good a fort position is based on the terrains near it
+     * Avoiding borders and water, prefer grass around
+     * @param grid terrain grid
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @return score , when it's higher its a better position
+     * 
+     */
     private int scoreFortPosition(EClientTerrain[][] grid, int x, int y) {
 
         int score = 0;
 
-        // avoid borders
+        // Avoid placing fort on border 
         if (x == 0 || y == 0 || x == width - 1 || y == height - 1) {
             score -= 5;
         }
