@@ -89,7 +89,7 @@ public class Game {
 
 	        logger.info("Play loop ended, client stopped.");
 	    }
-
+	    
 	    private void handleGameState(ClientGameState gameState) {
 
 	        EClientGameState myState = gameState.getMyGameState();
@@ -106,7 +106,7 @@ public class Game {
 	            act(gameState);
 	        }
 	    }
-
+	    //TODO: gameState see if necessary or remove strong coupling
 	    private void act(ClientGameState gameState) {
 
 	        long start = System.currentTimeMillis();   
@@ -204,7 +204,7 @@ public class Game {
 	    }
 
 	    private boolean isMoveSafe(ClientGameState gameState, ClientFullMapNode me,  EClientMove move) {
-		
+	    	// TODO: add less coupling remove whole gameState, maybe positon statt getX, getY
 			int x = me.getX();
 			int y = me.getY();
 			

@@ -46,6 +46,7 @@ public class PathFinder {
 	 * @param gameState current game state
 	 * @return next move for player
 	 */
+	// TODO: add strategy pattern maybe ad stamp coupling reduction mit hasTreasure ?? 
 	public EClientMove decideNextMove(ClientGameState gameState) {
 		logger.debug("~ Deciding next move");
 		MapHelper.printMap(nodes);
@@ -481,6 +482,7 @@ public class PathFinder {
 			return myFortIsTop ? p.y() > middleY : p.y() < middleY;
 		}
 	}
+	// TODO: maybe put it somewhere else
 
 	private int distanceToMapMiddle(Position p) {
 		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
