@@ -43,7 +43,6 @@ public class MapHelper {
                 }
             }
         }
-
         if (startX == -1) return false;
 
         boolean[][] visited = new boolean[height][width];
@@ -162,6 +161,15 @@ public class MapHelper {
         return null;
     }
     
+    public static boolean isFortPositionValid(EClientTerrain[][] grid, int fortX, int fortY) {
+
+        if (fortX < 0 || fortY < 0) return false;
+        if (fortY >= grid.length || fortX >= grid[0].length) return false;
+
+        return grid[fortY][fortX] == EClientTerrain.Grass;
+    }
+    
+    
     public static void printMap(Map<PathFinder.Position, ClientFullMapNode> nodes) {
 
         if (nodes == null || nodes.isEmpty()) {
@@ -193,7 +201,7 @@ public class MapHelper {
 
                 char c;
 
-                // Player
+                // Player  > TODO: hinzufuegen my node helpers . node.hasmyplayer zum bsp. 
                 if (node.getPlayerPositionState() == EClientPositionState.MyPlayerPosition ||
                     node.getPlayerPositionState() == EClientPositionState.BothPlayerPosition) {
                     c = 'P';

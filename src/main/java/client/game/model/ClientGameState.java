@@ -16,12 +16,12 @@ public class ClientGameState {
 	
 	
 	  public ClientGameState(ClientFullMap map, int x, int y, EClientGameState gameState,
-			  boolean hasTreasure, String gameStateId, boolean collectedTreasure) {
+			  boolean treasureVisible, String gameStateId, boolean collectedTreasure) {
 	        this.map = map;
 	        this.x =x; 
 	        this.y = y; 
 	        this.gameState = gameState;
-	        this.hasTreasure = hasTreasure;
+	        this.hasTreasure = treasureVisible;
 	        this.gameStateId = gameStateId;
 	        this.collectedTreasure = collectedTreasure;
 	    }

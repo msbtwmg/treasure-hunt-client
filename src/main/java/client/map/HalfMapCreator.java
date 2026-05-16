@@ -29,7 +29,7 @@ public class HalfMapCreator {
     private final Random random = new Random();
     private final int maxAttempts = 50;
 
-    
+   
 
     public List<ClientHalfMapNode> createHalfMap() {
 

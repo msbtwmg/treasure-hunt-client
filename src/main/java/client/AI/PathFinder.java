@@ -239,13 +239,13 @@ public class PathFinder {
 		ClientFullMapNode best = null;
 		int bestScore = Integer.MAX_VALUE;
 
-		for (ClientFullMapNode n : nodes.values()) {
+		for (ClientFullMapNode node : nodes.values()) {
 
-			Position p = new Position(n.getX(), n.getY());
+			Position p = new Position(node.getX(), node.getY()); 
 
 			if (visited.contains(p)) continue;
 			if (unreachableTargets.contains(p)) continue;
-			if (!isPassable(n)) continue;
+			if (!isPassable(node)) continue;
 
 			List<Position> path = findPath(new Position(me.getX(), me.getY()), p, hasTreasure);
 			if (path.isEmpty()) continue;
@@ -253,7 +253,7 @@ public class PathFinder {
 			int score = path.size();
 
 			// before treasure prefer mountains 
-			if (!hasTreasure && n.getTerrain() == EClientTerrain.Mountain) {
+			if (!hasTreasure && node.getTerrain() == EClientTerrain.Mountain) {
 				score -= 2;
 			}
 
@@ -264,7 +264,7 @@ public class PathFinder {
 
 			if (score < bestScore) {
 				bestScore = score;
-				best = n;
+				best = node;
 			}
 		}
 
@@ -276,25 +276,25 @@ public class PathFinder {
 		ClientFullMapNode best = null;
 		int bestScore = Integer.MAX_VALUE;
 
-		for (ClientFullMapNode n : nodes.values()) {
+		for (ClientFullMapNode node : nodes.values()) {
 
-			Position p = new Position(n.getX(), n.getY());
+			Position position = new Position(node.getX(), node.getY());
 
-			if (!isEnemyHalf(p)) continue;
-			if (unreachableTargets.contains(p)) continue;
-			if (!isPassable(n)) continue;
+			if (!isEnemyHalf(position)) continue;
+			if (unreachableTargets.contains(position)) continue;
+			if (!isPassable(node)) continue;
 
-			List<Position> path = findPath(new Position(me.getX(), me.getY()), p, hasTreasure);
+			List<Position> path = findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
 			if (path.isEmpty()) continue;
 
 			int score = path.size();
 
 			// prefer fields near the middle 
-			score += distanceToMapMiddle(p);
+			score += distanceToMapMiddle(position);
 
 			if (score < bestScore) {
 				bestScore = score;
-				best = n;
+				best = node;
 			}
 		}
 
@@ -382,7 +382,7 @@ public class PathFinder {
 
 		return switch (n.getTerrain()) {
 			case Grass -> collectedTreasure ? 1 : 3;
-			case Mountain -> collectedTreasure ? 4 : 1; // Mountain priority before finding treasure
+			case Mountain -> collectedTreasure ? 4 : 1; // High Mountain priority before finding treasure
 			case Water -> Integer.MAX_VALUE / 4;
 		};
 	}

@@ -43,6 +43,30 @@ public class ClientFullMapNode {
 		return positionState;
 	}
 	
+	public boolean hasMyPlayer() {
+	    return positionState == EClientPositionState.MyPlayerPosition;
+	}
+
+	public boolean hasEnemyPlayer() {
+	    return positionState == EClientPositionState.EnemyPlayerPosition;
+	}
+
+	public boolean hasBothPlayer() {
+	    return positionState == EClientPositionState.BothPlayerPosition;
+	}
+
+	public boolean isTreasureVisible() {
+	    return treasureState == EClientTreasureState.MyTreasureIsPresent;
+	}
+
+	public boolean hasMyFort() {
+	    return fortState == EClientFortState.MyFortPresent;
+	}
+
+	public boolean hasEnemyFort() {
+	    return fortState == EClientFortState.EnemyFortPresent;
+	}
+	
 
 	
 	

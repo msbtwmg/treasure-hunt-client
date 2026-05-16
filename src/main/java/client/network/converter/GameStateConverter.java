@@ -47,8 +47,6 @@ public final class GameStateConverter {
 
 	    ClientFullMap fullMap = new ClientFullMap(nodes);
 
-	    
-	    
 	    int x = -1;
 	    int y = -1;
 
@@ -112,7 +110,8 @@ public final class GameStateConverter {
 	        case Mountain -> EClientTerrain.Mountain;
 	    };
 	}
-	
+
+   
 	private static EClientFortState toClientFortState(EFortState fortState) {
 	    return switch (fortState) {
 	        case MyFortPresent    -> EClientFortState.MyFortPresent;
@@ -163,10 +162,10 @@ public final class GameStateConverter {
             case Right -> EMove.Right;
         };
     }
-    
+    // TODO: better method name vllt  toServerPlayerMove, createPlayerMove. 
     public static PlayerMove toServerClientMove(String playerId, EClientMove move) {
         final EMove movement = toServerMove(move);
         return PlayerMove.of(playerId, movement);
     }
-   
 }
+
