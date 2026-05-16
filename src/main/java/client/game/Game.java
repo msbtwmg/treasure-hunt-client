@@ -121,39 +121,24 @@ public class Game {
 	        }
 	    }
 	    
-	    //TODO: gameState see if necessary or remove strong coupling
 	    private void act(ClientGameState gameState) {
 
 	        long start = System.currentTimeMillis();   
 
 	       
-	        if (moveCount > MAX_MOVES) {
-	            logger.error("Too many moves, STOPPING");
-	            running = false;
-	            return;
-	        }
+	        if (tooManyMoves()) return;
 
-	        // Sending the half map ONCE
 	        if (!sentMap) {
 				createHalfMap(gameState);
-			    if (!validateHalfMap()) {
-			        logger.error("HalfMap validation failed");
-			        return;
-			    }
-			    
+				
 	            sendMap();
+	            
 	            logger.debug("Map sent ({} ms)", System.currentTimeMillis() - start);
 	            return;
 	        }
 
-	      
-	        if (!gameState.hasFullMap()) {
-	            logger.debug("FullMap not available yet");
-	            return;
-	        }
+	        if (!preparePathFinder(gameState)) return;
 
-	        // Updating Pathfinder 
-	        pathFinder.setNodes(gameState.getMapNodes());
 
 	        ClientFullMapNode me = pathFinder.findMyPosition();
 	        if (me == null) {
@@ -161,37 +146,26 @@ public class Game {
 	            return;
 	        }
 
-	        int x = me.getX();
-	        int y = me.getY();
-
-	        if (x == lastX && y == lastY) {
-	            logger.debug("Still on same tile (possible stuck)");
-	        }
+	        rememberPosition(me);
 	        
-	        boolean hasTreasure = gameState.collectedTreasure();
-
+	        EClientMove move = chooseMove(gameState, me);
 	        
-	        EClientMove move = pathFinder.decideNextMove(hasTreasure);
-
-	      
-	        if (move == null || !isMoveSafe(gameState, me, move)) {
-	            move = pathFinder.fallbackMove(me, hasTreasure);
-	        }
-
-	        if (move == null || !isMoveSafe(gameState, me, move)) {
+	        if (move == null) {
 	            logger.warn("No safe move possible");
 	            return;
 	        }
 
-	        lastX = x;
-	        lastY = y;
-
 	     
 	        sendMove(move);
 
-	        logger.info("Has treasure in inventory: {}", hasTreasure);
-	        long duration = System.currentTimeMillis() - start;
+	        logDecisionTime(start, gameState.collectedTreasure());
 
+	    }
+	    
+	    private void logDecisionTime(long start, boolean hasTreasure) {
+	        logger.info("Has treasure in inventory: {}", hasTreasure);
+
+	        long duration = System.currentTimeMillis() - start;
 	        logger.debug("Decision took {} ms", duration);
 
 	        if (duration > 4500) {
@@ -199,10 +173,61 @@ public class Game {
 	        }
 	    }
 	    
+	    private EClientMove chooseMove(ClientGameState gameState, ClientFullMapNode me) {
+	        boolean hasTreasure = gameState.collectedTreasure();
+
+	        EClientMove move = pathFinder.decideNextMove(hasTreasure);
+
+	        if (move == null || !isMoveSafe(me, move)) {
+	            move = pathFinder.fallbackMove(me, hasTreasure);
+	        }
+
+	        if (move == null || !isMoveSafe(me, move)) {
+	            return null;
+	        }
+
+	        return move;
+	    }
+	    
+	    private void rememberPosition(ClientFullMapNode me) {
+	        int x = me.getX();
+	        int y = me.getY();
+
+	        if (x == lastX && y == lastY) {
+	            logger.debug("Still on same tile (possible stuck)");
+	        }
+
+	        lastX = x;
+	        lastY = y;
+	    }
+	    
+	    
+	    private boolean preparePathFinder(ClientGameState gameState) {
+	        if (!gameState.hasFullMap()) {
+	            logger.debug("FullMap not available yet");
+	            return false;
+	        }
+
+	        pathFinder.setNodes(gameState.getMapNodes());
+	        return true;
+	    }
+	    
+	    private boolean tooManyMoves() { 
+	        if (moveCount <=  MAX_MOVES) return false; 
+	            logger.error("Too many moves, STOPPING");
+	            running = false;
+	            return true;
+
+	    }
 	    
 	    private void sendMap() {
 	        if (sentMap) return;
 
+	        if (!validateHalfMap()) {
+		        logger.error("HalfMap validation failed");
+		        return;
+		    }
+	        
 	        logger.info("Sending HalfMap");
 
 	        network.sendHalfMap(
@@ -244,7 +269,7 @@ public class Game {
 	        logger.debug("Move: {}", move);
 	    }
 
-	    private boolean isMoveSafe(ClientGameState gameState, ClientFullMapNode me,  EClientMove move) {
+	    private boolean isMoveSafe(ClientFullMapNode me,  EClientMove move) {
 	    	// TODO: add less coupling remove whole gameState, maybe positon statt getX, getY
 			int x = me.getX();
 			int y = me.getY();
