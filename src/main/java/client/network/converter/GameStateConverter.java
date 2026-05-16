@@ -61,7 +61,7 @@ public final class GameStateConverter {
 	            break;
 	        }
 	    }
-
+	    
 	    if (x == -1 || y == -1) {
 	        logger.warn("My position not found in FullMap yet");
 	    }
@@ -86,7 +86,6 @@ public final class GameStateConverter {
 	            x,
 	            y,
 	            myGameState,
-	            hasTreasure,
 	            gameState.getGameStateId(),
 	            hasTreasure
 	    );

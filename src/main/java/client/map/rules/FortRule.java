@@ -2,23 +2,22 @@ package client.map.rules;
 
 import client.map.MapHelper;
 import client.map.model.ClientHalfMap;
+import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
+public class FortRule implements MapRule {
 
-public class FortRule {
-    private final int fortX;
-    private final int fortY;
-    
-	 public FortRule(int fortX, int fortY) {
-	        this.fortX = fortX;
-	        this.fortY = fortY;
-	    }
-	 
-	 
-	public void validate(ClientHalfMap map, RuleNotifications notifications) {
-	    EClientTerrain[][] grid = map.toTerrainGrid();
+    @Override
+    public void validate(ClientHalfMap map, RuleNotifications notifications) {
+        long fortCount = map.getMapNodes().stream()
+                .filter(ClientHalfMapNode::myFortPresent)
+                .count();
 
-	    if (!MapHelper.isFortPositionValid(grid, fortX, fortY)) {
-	        notifications.addError("Fort is placed on invalid terrain!");
-	    }
-	}
+        boolean fortOnGrass = map.getMapNodes().stream()
+                .filter(ClientHalfMapNode::myFortPresent)
+                .allMatch(node -> node.getTerrain() == EClientTerrain.Grass);
+
+        if (fortCount != 1 || !fortOnGrass) {
+            notifications.addError("Fort is placed on invalid terrain!");
+        }
+    }
 }

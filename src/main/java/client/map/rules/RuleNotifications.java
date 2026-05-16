@@ -26,6 +26,10 @@ public class RuleNotifications {
         return !errors.isEmpty();
     }
     
+    public List<RuleError> getErrors() {
+        return Collections.unmodifiableList(errors);
+    }
+    
     /**
      * Error message combination
      */

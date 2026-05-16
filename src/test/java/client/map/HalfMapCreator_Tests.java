@@ -11,35 +11,31 @@ import org.junit.jupiter.api.Test;
 
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
-
+import client.map.placement.DefaultFortPlacement;
 public class HalfMapCreator_Tests {
 
     private HalfMapCreator creator;
 
     @BeforeEach
     public void setUp() {
-        creator = new HalfMapCreator();
+        creator = new HalfMapCreator(new DefaultFortPlacement());
+        
     }
 
     @Test
     public void createHalfMap_shouldCreate50Nodes() {
-        // Arrange
-
-        // Act
+      
         List<ClientHalfMapNode> result = creator.createHalfMap();
-
-        // Assert
+    
         assertEquals(50, result.size());
     }
 
     @Test
     public void createHalfMap_shouldCreateOneFort() {
-        // Arrange
-
-        // Act
+      
         List<ClientHalfMapNode> result = creator.createHalfMap();
 
-        // Assert
+    
         long fortCount = result.stream()
                 .filter(node -> node.myFortPresent())
                 .count();
@@ -49,12 +45,10 @@ public class HalfMapCreator_Tests {
 
     @Test
     public void createHalfMap_shouldCreateEnoughGrass() {
-        // Arrange
-
-        // Act
+      
         List<ClientHalfMapNode> result = creator.createHalfMap();
 
-        // Assert
+       
         long grassCount = result.stream()
                 .filter(node -> node.getTerrain() == EClientTerrain.Grass)
                 .count();
@@ -64,12 +58,10 @@ public class HalfMapCreator_Tests {
 
     @Test
     public void createHalfMap_shouldCreateEnoughWater() {
-        // Arrange
-
-        // Act
+    
         List<ClientHalfMapNode> result = creator.createHalfMap();
 
-        // Assert
+     
         long waterCount = result.stream()
                 .filter(node -> node.getTerrain() == EClientTerrain.Water)
                 .count();
@@ -79,12 +71,9 @@ public class HalfMapCreator_Tests {
 
     @Test
     public void createHalfMap_shouldCreateEnoughMountains() {
-        // Arrange
-
-        // Act
+      
         List<ClientHalfMapNode> result = creator.createHalfMap();
 
-        // Assert
         long mountainCount = result.stream()
                 .filter(node -> node.getTerrain() == EClientTerrain.Mountain)
                 .count();

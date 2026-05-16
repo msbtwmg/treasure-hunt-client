@@ -1,6 +1,7 @@
 package client.game;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -10,9 +11,21 @@ import client.AI.PathFinder;
 import client.game.model.ClientGameState;
 import client.game.model.EClientGameState;
 import client.game.model.EClientMove;
+import client.map.HalfMapCreator;
 import client.map.model.ClientFullMapNode;
+import client.map.model.ClientHalfMap;
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
+import client.map.placement.DefaultFortPlacement;
+import client.map.placement.FarFortPlacement;
+import client.map.placement.FortPlacementStrategy;
+import client.map.rules.BorderAccessibilityRule;
+import client.map.rules.FortRule;
+import client.map.rules.MapConnectionRule;
+import client.map.rules.MapRule;
+import client.map.rules.RuleError;
+import client.map.rules.RuleNotifications;
+import client.map.rules.TerrainRule;
 import client.network.ClientNetwork;
 import client.network.converter.GameStateConverter;
 import client.network.converter.HalfMapConverter;
@@ -24,7 +37,7 @@ public class Game {
 
 	    private final ClientNetwork network;
 	    private final String playerId;
-	    private final List<ClientHalfMapNode> halfMap;
+	    private List<ClientHalfMapNode> halfMap;
 
 	    private final PathFinder pathFinder = new PathFinder();
 
@@ -42,12 +55,16 @@ public class Game {
 
 	    private int lastX = -1;
 	    private int lastY = -1;
+	    
+	    private final GameController controller;
+	    
 
-	    public Game(ClientNetwork network, String playerId, List<ClientHalfMapNode> halfMap) {
+	    public Game(ClientNetwork network, String playerId, GameController controller) {
 
 	        this.network = network;
 	        this.playerId = playerId;
-	        this.halfMap = halfMap;
+	        this.controller = controller; 
+	     
 	    }
 
 	    public void play() {
@@ -71,9 +88,8 @@ public class Game {
 
 
 	                ClientGameState gameState = network.getGameState(playerId);
-	                
-
-
+	                controller.receivedGameState(gameState);
+	             
 	                moveSentForCurrentState = false;
 	     	        lastRequest = System.currentTimeMillis();
 
@@ -92,20 +108,19 @@ public class Game {
 	    
 	    private void handleGameState(ClientGameState gameState) {
 
-	        EClientGameState myState = gameState.getMyGameState();
+	        if (gameState == null || gameState.getMyGameState() == null) return;
 
-	        if (myState == null) return;
-
-	        if (myState == EClientGameState.Won || myState == EClientGameState.Lost) {
-	            logger.info("Game finished: {}", myState);
+	        if (gameState.gameFinished()) {
+	            logger.info("Game finished: {}", gameState.getMyGameState());
 	            running = false;
 	            return;
 	        }
 
-	        if (myState == EClientGameState.MustAct) {
+	        if (gameState.mustAct()) {
 	            act(gameState);
 	        }
 	    }
+	    
 	    //TODO: gameState see if necessary or remove strong coupling
 	    private void act(ClientGameState gameState) {
 
@@ -120,19 +135,25 @@ public class Game {
 
 	        // Sending the half map ONCE
 	        if (!sentMap) {
+				createHalfMap(gameState);
+			    if (!validateHalfMap()) {
+			        logger.error("HalfMap validation failed");
+			        return;
+			    }
+			    
 	            sendMap();
 	            logger.debug("Map sent ({} ms)", System.currentTimeMillis() - start);
 	            return;
 	        }
 
 	      
-	        if (gameState.getMap() == null) {
+	        if (!gameState.hasFullMap()) {
 	            logger.debug("FullMap not available yet");
 	            return;
 	        }
 
 	        // Updating Pathfinder 
-	        pathFinder.setNodes(gameState.getMap().getMapNodes());
+	        pathFinder.setNodes(gameState.getMapNodes());
 
 	        ClientFullMapNode me = pathFinder.findMyPosition();
 	        if (me == null) {
@@ -146,13 +167,15 @@ public class Game {
 	        if (x == lastX && y == lastY) {
 	            logger.debug("Still on same tile (possible stuck)");
 	        }
+	        
+	        boolean hasTreasure = gameState.collectedTreasure();
 
 	        
-	        EClientMove move = pathFinder.decideNextMove(gameState);
+	        EClientMove move = pathFinder.decideNextMove(hasTreasure);
 
 	      
 	        if (move == null || !isMoveSafe(gameState, me, move)) {
-	            move = pathFinder.fallbackMove(me, gameState.collectedTreasure());
+	            move = pathFinder.fallbackMove(me, hasTreasure);
 	        }
 
 	        if (move == null || !isMoveSafe(gameState, me, move)) {
@@ -166,7 +189,7 @@ public class Game {
 	     
 	        sendMove(move);
 
-	        logger.info("Has treasure in inventory: {}", gameState.collectedTreasure());
+	        logger.info("Has treasure in inventory: {}", hasTreasure);
 	        long duration = System.currentTimeMillis() - start;
 
 	        logger.debug("Decision took {} ms", duration);
@@ -188,7 +211,25 @@ public class Game {
 
 	        sentMap = true;
 	    }
+	    
+	    private void createHalfMap(ClientGameState gameState) {
+	        if (halfMap != null) return;
 
+	        FortPlacementStrategy strategy;
+
+	        if (gameState.isSecondClient()) {
+	            strategy = new FarFortPlacement(5, 2); 
+	            logger.info("Second client -> using far fort placement");
+	        } else {
+	            strategy = new DefaultFortPlacement();
+	            logger.info("First client -> using default fort placement");
+	        }
+
+	        HalfMapCreator creator = new HalfMapCreator(strategy);
+	        halfMap = creator.createHalfMap();
+	    }
+	    
+	 
 	    private void sendMove(EClientMove move) {
 
 	        if (moveSentForCurrentState) return;
@@ -222,7 +263,38 @@ public class Game {
 			
 			return target != null && target.getTerrain() != EClientTerrain.Water;
 		}
+	    
+	    private boolean validateHalfMap() {
 
-	  
-	
+	        if (halfMap == null || halfMap.isEmpty()) {
+	            logger.error("HalfMap is empty");
+	            return false;
+	        }
+
+	        ClientHalfMap map = new ClientHalfMap(Set.copyOf(halfMap));
+
+	        RuleNotifications notifications = new RuleNotifications();
+
+	        List<MapRule> rules = List.of(
+	                new BorderAccessibilityRule(),
+	                new TerrainRule(24, 7, 6),
+	                new MapConnectionRule(),
+	                new FortRule()
+	        );
+
+	        for (MapRule rule : rules) {
+	            rule.validate(map, notifications);
+	        }
+
+	        if (notifications.hasError()) {
+	            for (RuleError error : notifications.getErrors()) {
+	                logger.error("Map validation error: {}", error.getMessage());
+	            }
+
+	            return false;
+	        }
+
+	        return true;
+	    }
+
 }

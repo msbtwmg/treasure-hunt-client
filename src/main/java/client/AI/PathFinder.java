@@ -47,7 +47,7 @@ public class PathFinder {
 	 * @return next move for player
 	 */
 	// TODO: add strategy pattern maybe ad stamp coupling reduction mit hasTreasure ?? 
-	public EClientMove decideNextMove(ClientGameState gameState) {
+	public EClientMove decideNextMove(boolean hasTreasure) {
 		logger.debug("~ Deciding next move");
 		MapHelper.printMap(nodes);
 
@@ -57,7 +57,6 @@ public class PathFinder {
 		if (me == null) return EClientMove.Right;
 
 		Position myPos = new Position(me.getX(), me.getY());
-		boolean hasTreasure = gameState.collectedTreasure();
 
 		updatePositionMemory(myPos);
 

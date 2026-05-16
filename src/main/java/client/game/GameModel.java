@@ -11,6 +11,8 @@ public class GameModel {
 
     public final GameEvent<ClientGameState> gameStateChanged = new GameEvent<>();
     public final GameEvent<RuleError> mapValidationError = new GameEvent<>();
+    private boolean gameFinished;
+    private boolean won;
 
 
     public void updateGameState(ClientGameState newState) {
@@ -34,5 +36,16 @@ public class GameModel {
     public void notifyMapValidationError(RuleError errorMessage) {
         mapValidationError.notifyObservers(errorMessage);
     }
+    
+  
+    public final GameEvent<Boolean> gameFinishedChanged = new GameEvent<>();
+    
+
+    public void setGameFinished(boolean won) {
+        this.gameFinished = true;
+        this.won = won;
+        gameFinishedChanged.notifyObservers(won);
+    }
+    
     
 }

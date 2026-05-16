@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GameEvent<T> {
-	// TODO: add, notify , remove hinzufuegen
 	private final List<GameObserver<T>> observers = new ArrayList<>();
 	
 	public void addObserver(GameObserver<T> observer) {

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
+import client.map.placement.FortPlacementStrategy;
 
 public class HalfMapCreator {
 
@@ -28,9 +29,14 @@ public class HalfMapCreator {
 
     private final Random random = new Random();
     private final int maxAttempts = 50;
+    
+    private final FortPlacementStrategy fortPlacementStrategy;
+    
+    public HalfMapCreator(FortPlacementStrategy fortPlacementStrategy) {
+        this.fortPlacementStrategy = fortPlacementStrategy;
+    }
 
    
-
     public List<ClientHalfMapNode> createHalfMap() {
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -40,6 +46,7 @@ public class HalfMapCreator {
             EClientTerrain[][] grid = createTerrainGrid();
             
             smoothTerrain(grid);
+           
             
             if (!placeFortSmart(grid)) continue;
 
@@ -138,32 +145,12 @@ public class HalfMapCreator {
     }
 
     private boolean placeFortSmart(EClientTerrain[][] grid) {
+        int[] chosen = fortPlacementStrategy.chooseFortPosition(grid);
 
-        List<int[]> candidates = new ArrayList<>();
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-
-                if (grid[y][x] != EClientTerrain.Grass) continue;
-
-                int score = scoreFortPosition(grid, x, y);
-                if (score >= 0) {
-                    candidates.add(new int[]{x, y, score});
-                }
-            }
-        }
-
-        if (candidates.isEmpty()) {
+        if (chosen == null) {
             logger.debug("No valid fort positions found");
             return false;
         }
-
-        
-        candidates.sort((a, b) -> Integer.compare(b[2], a[2]));
-
-        // Select randomly from top 30 % best positions
-        int cutoff = Math.max(1, candidates.size() * 3 / 10);
-        int[] chosen = candidates.get(random.nextInt(cutoff));
 
         fortPositionX = chosen[0];
         fortPositionY = chosen[1];
@@ -181,38 +168,7 @@ public class HalfMapCreator {
      * @return score , when it's higher its a better position
      * 
      */
-    private int scoreFortPosition(EClientTerrain[][] grid, int x, int y) {
-
-        int score = 0;
-
-        // Prefer central positions
-        int centerX = width / 2;
-        int centerY = height / 2;
-        int distToCenter = Math.abs(x - centerX) + Math.abs(y - centerY);
-        score -= distToCenter;
-
-        // Avoid placing fort on border 
-        if (x == 0 || y == 0 || x == width - 1 || y == height - 1) {
-            score -= 5;
-        }
-
-        int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
-        int grassNeighbors = 0;
-
-        for (int[] d : dirs) {
-            int nx = x + d[0];
-            int ny = y + d[1];
-
-            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-
-            if (grid[ny][nx] == EClientTerrain.Grass) grassNeighbors++;
-            if (grid[ny][nx] == EClientTerrain.Water) score -= 4;
-        }
-
-        score += grassNeighbors * 2;
-
-        return score;
-    }
+   
 
  
     private Map<Position, ClientHalfMapNode> createNodeMap(EClientTerrain[][] grid) {

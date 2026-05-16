@@ -1,19 +1,22 @@
 package client.main;
 
-import client.game.Game;
-import client.map.HalfMapCreator;
-import client.map.model.ClientHalfMapNode;
-import client.network.ClientNetwork;
-
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import client.game.Game;
+import client.game.GameController;
+import client.game.GameModel;
+import client.game.StateView;
+import client.game.ValidationView;
+import client.map.MapView;
+import client.network.ClientNetwork;
 import exceptions.InvalidArgumentsException;
 
+
+
+
 public class MainClient {
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(MainClient.class);
 	
     private static String FIRSTNAME = "REDACTED";
@@ -22,7 +25,7 @@ public class MainClient {
     
 
 	public static void main(String[] args) {
-
+	   
         try {
             if (args.length < 3) {
                 throw new InvalidArgumentsException(
@@ -47,16 +50,17 @@ public class MainClient {
             ClientNetwork network = new ClientNetwork(config);
             String playerId = network.registerPlayer().getUniquePlayerID();
 
-            logger.info("Registered player: {}", playerId);
-
-           
-            HalfMapCreator creator = new HalfMapCreator();
-            List<ClientHalfMapNode> nodes = creator.createHalfMap();
-
-            logger.info("HalfMap successfully created");
-
-            //Game sends the half map before starting loop
-            Game game = new Game(network, playerId, nodes);
+            logger.info("Registered player: {}", playerId); 
+            
+            GameModel model = new GameModel(); 
+            GameController controller = new GameController(model);
+            
+            new MapView(model);
+            new StateView(model);
+            new ValidationView(model);
+            
+            Game game = new Game(network, playerId, controller);
+      
 
             logger.info("~~~Starting game~~~~");
             game.play();
@@ -69,4 +73,6 @@ public class MainClient {
             logger.error("Fatal error in main", e);
         }
 	}
+	
+	
 }
