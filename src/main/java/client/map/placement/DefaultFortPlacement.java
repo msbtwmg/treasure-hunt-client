@@ -32,6 +32,17 @@ public class DefaultFortPlacement implements FortPlacementStrategy {
         return candidates.get(random.nextInt(cutoff));
     }
 
+
+    /**
+     * Rates how good a fort position is based on the terrains near it
+     * Avoiding borders and water, prefer grass around
+     * @param grid terrain grid
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @return score , when it's higher its a better position
+     * 
+     */
+   
     private int scoreFortPosition(EClientTerrain[][] grid, int x, int y) {
         int width = grid[0].length;
         int height = grid.length;

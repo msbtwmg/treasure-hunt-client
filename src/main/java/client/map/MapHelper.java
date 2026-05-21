@@ -142,7 +142,7 @@ public class MapHelper {
         return x == 0 || y == 0 || x == width - 1 || y == height - 1;
     }
     
-    // TODO: statt ws25 gamestate, position direkt rausholen für weniger visibility
+    // gamestate statt Positio n TODO: Kontrolle Test  position 
     public static ClientFullMapNode findMyPosition(Map<PathFinder.Position, ClientFullMapNode> nodes) {
 
         if (nodes == null || nodes.isEmpty()) {
@@ -169,66 +169,5 @@ public class MapHelper {
         return grid[fortY][fortX] == EClientTerrain.Grass;
     }
     
-    
-    public static void printMap(Map<PathFinder.Position, ClientFullMapNode> nodes) {
-
-        if (nodes == null || nodes.isEmpty()) {
-            System.out.println("Map is empty");
-            return;
-        }
-
-        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
-        int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
-
-        for (PathFinder.Position p : nodes.keySet()) {
-            minX = Math.min(minX, p.x());
-            maxX = Math.max(maxX, p.x());
-            minY = Math.min(minY, p.y());
-            maxY = Math.max(maxY, p.y());
-        }
-
-        System.out.println("\n=== MAP DEBUG ===");
-
-        for (int y = minY; y <= maxY; y++) {
-            for (int x = minX; x <= maxX; x++) {
-
-                ClientFullMapNode node = nodes.get(new PathFinder.Position(x, y));
-
-                if (node == null) {
-                    System.out.print(" ? ");
-                    continue;
-                }
-
-                char c;
-
-                // Player  > TODO: hinzufuegen my node helpers . node.hasmyplayer zum bsp. 
-                if (node.getPlayerPositionState() == EClientPositionState.MyPlayerPosition ||
-                    node.getPlayerPositionState() == EClientPositionState.BothPlayerPosition) {
-                    c = 'P';
-                }
-                // Fort
-                else if (node.getFortState() == EClientFortState.EnemyFortPresent) {
-                    c = 'F';
-                }
-                // Treasure
-                else if (node.getTreasureState() == EClientTreasureState.MyTreasureIsPresent) {
-                    c = 'T';
-                }
-                // Terrain
-                else {
-                    c = switch (node.getTerrain()) {
-                        case Grass -> '.';
-                        case Mountain -> 'M';
-                        case Water -> 'W';
-                    };
-                }
-
-                System.out.print(" " + c + " ");
-            }
-            System.out.println();
-        }
-
-        System.out.println("=================\n");
-    }
     
 }

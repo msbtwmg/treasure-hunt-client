@@ -15,7 +15,6 @@ public class ClientHalfMap {
 		return nodes;
 	}
 	
-	// Zwiebelschale
 	public EClientTerrain[][] toTerrainGrid() {
 	    EClientTerrain[][] grid = new EClientTerrain[5][10];
 

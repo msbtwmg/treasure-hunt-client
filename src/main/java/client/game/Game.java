@@ -17,8 +17,11 @@ import client.map.model.ClientHalfMap;
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
 import client.map.placement.DefaultFortPlacement;
+import client.map.placement.EnemyHalfFinder;
+import client.map.placement.EnemyHalfPosition;
 import client.map.placement.FarFortPlacement;
 import client.map.placement.FortPlacementStrategy;
+import client.map.placement.FortQuarter;
 import client.map.rules.BorderAccessibilityRule;
 import client.map.rules.FortRule;
 import client.map.rules.MapConnectionRule;
@@ -240,20 +243,32 @@ public class Game {
 	    private void createHalfMap(ClientGameState gameState) {
 	        if (halfMap != null) return;
 
-	        FortPlacementStrategy strategy;
 
-	        if (gameState.isSecondClient()) {
-	            strategy = new FarFortPlacement(5, 2); 
-	            logger.info("Second client -> using far fort placement");
-	        } else {
-	            strategy = new DefaultFortPlacement();
-	            logger.info("First client -> using default fort placement");
-	        }
+	        FortPlacementStrategy strategy = chooseFortStrategy(gameState);
 
 	        HalfMapCreator creator = new HalfMapCreator(strategy);
 	        halfMap = creator.createHalfMap();
 	    }
 	    
+	    private FortPlacementStrategy chooseFortStrategy(ClientGameState gameState) {
+	        if (!gameState.isSecondClient()) {
+	            logger.info("First client -> using default fort placement");
+	            return new DefaultFortPlacement();
+	        }
+
+	        EnemyHalfPosition enemyPos = new EnemyHalfFinder().find(gameState.getMapNodes());
+
+	        logger.info("Second client -> enemy half is {}", enemyPos);
+
+	        return switch (enemyPos) {
+		        case RIGHT  -> new FarFortPlacement(FortQuarter.TOP_LEFT);     // or bottom left
+		        case LEFT   -> new FarFortPlacement(FortQuarter.TOP_RIGHT);    // or  b r
+		        case BOTTOM -> new FarFortPlacement(FortQuarter.TOP_LEFT);     // or t r 
+		        case TOP    -> new FarFortPlacement(FortQuarter.BOTTOM_LEFT);  // or b l 
+		        case ORIGIN -> new FarFortPlacement(FortQuarter.BOTTOM_RIGHT);
+		        case NOTFOUND -> new DefaultFortPlacement(); 
+	        };
+	    }
 	 
 	    private void sendMove(EClientMove move) {
 

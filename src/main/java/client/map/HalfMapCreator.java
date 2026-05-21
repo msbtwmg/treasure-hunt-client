@@ -159,16 +159,6 @@ public class HalfMapCreator {
         return true;
     }
 
-    /**
-     * Rates how good a fort position is based on the terrains near it
-     * Avoiding borders and water, prefer grass around
-     * @param grid terrain grid
-     * @param x x-coordinate
-     * @param y y-coordinate
-     * @return score , when it's higher its a better position
-     * 
-     */
-   
 
  
     private Map<Position, ClientHalfMapNode> createNodeMap(EClientTerrain[][] grid) {

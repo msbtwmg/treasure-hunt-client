@@ -49,7 +49,6 @@ public class PathFinder {
 	// TODO: add strategy pattern maybe ad stamp coupling reduction mit hasTreasure ?? 
 	public EClientMove decideNextMove(boolean hasTreasure) {
 		logger.debug("~ Deciding next move");
-		MapHelper.printMap(nodes);
 
 		if (nodes.isEmpty()) return EClientMove.Right;
 
@@ -455,6 +454,7 @@ public class PathFinder {
 		return width > height;
 	}
 
+	// TODO: PPut in Fullmap, 
 	private boolean isEnemyHalf(Position p) {
 		ClientFullMapNode fort = findMyFort();
 		if (fort == null) return false;
