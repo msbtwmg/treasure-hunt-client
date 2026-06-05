@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import client.game.model.ClientGameState;
 import client.game.model.EClientMove;
 import client.map.MapHelper;
+import client.map.model.ClientFullMap;
 import client.map.model.ClientFullMapNode;
 import client.map.model.EClientFortState;
 import client.map.model.EClientPositionState;
@@ -17,28 +18,24 @@ import client.map.model.EClientTreasureState;
 public class PathFinder {
 	private static final Logger logger = LoggerFactory.getLogger(PathFinder.class);
 
-	private Map<Position, ClientFullMapNode> nodes = new HashMap<>();
-
-	private ClientFullMapNode currentTarget = null;
+	private ClientFullMapNode currentTarget;
+	private ClientFullMap map;
 
 	private final Set<Position> visited = new HashSet<>();
 	private final Set<Position> unreachableTargets = new HashSet<>();
 	private final Deque<Position> recentPositions = new ArrayDeque<>();
 
-	private Position lastPosition = null;
+	private Position lastPosition;
 	private int stuckCounter = 0;
 
 	private static final int MAX_RECENT_POSITIONS = 6;
 
 	public record Position(int x, int y) {}
 
-	public void setNodes(Collection<ClientFullMapNode> mapNodes) {
-		nodes.clear();
-
-		for (ClientFullMapNode n : mapNodes) {
-			nodes.put(new Position(n.getX(), n.getY()), n);
-		}
+	public void setMap(ClientFullMap fullMap) {
+	    this.map = fullMap;
 	}
+
 
 	/**
 	 * Decides the next move based on current game state
@@ -46,13 +43,13 @@ public class PathFinder {
 	 * @param gameState current game state
 	 * @return next move for player
 	 */
-	// TODO: add strategy pattern maybe ad stamp coupling reduction mit hasTreasure ?? 
+
 	public EClientMove decideNextMove(boolean hasTreasure) {
 		logger.debug("~ Deciding next move");
 
-		if (nodes.isEmpty()) return EClientMove.Right;
+		if (map == null || map.getMapNodes().isEmpty()) return EClientMove.Right;
 
-		ClientFullMapNode me = findMyPosition();
+		ClientFullMapNode me = map.findMyPosition();
 		if (me == null) return EClientMove.Right;
 
 		Position myPos = new Position(me.getX(), me.getY());
@@ -87,7 +84,7 @@ public class PathFinder {
 			if (!hasTreasure) {
 				logger.debug("Searching for treasure..");
 
-				ClientFullMapNode treasure = findTreasure();
+				ClientFullMapNode treasure = map.findTreasure();
 				currentTarget = (treasure != null) ? treasure: findClosestUnvisited(me, hasTreasure);
 			}
 
@@ -99,7 +96,7 @@ public class PathFinder {
 			else {
 				logger.debug("Searching for enemy fort...");
 
-				ClientFullMapNode fort = findEnemyFort();
+				ClientFullMapNode fort = map.findEnemyFort();
 				currentTarget = (fort != null)
 						? fort
 						: findClosestUnvisited(me, hasTreasure);
@@ -191,8 +188,8 @@ public class PathFinder {
 
 			for (Position nb : neighbors(cur)) {
 
-				ClientFullMapNode node = nodes.get(nb);
-				if (node == null || !isPassable(node)) continue;
+				ClientFullMapNode node = getNode(nb);
+				if (node == null || !map.isPassable(node)) continue;
 
 				int cost = terrainCost(node, collectedTreasure);
 
@@ -237,15 +234,15 @@ public class PathFinder {
 		ClientFullMapNode best = null;
 		int bestScore = Integer.MAX_VALUE;
 
-		for (ClientFullMapNode node : nodes.values()) {
+		for (ClientFullMapNode node : map.getMapNodes()) {
 
-			Position p = new Position(node.getX(), node.getY()); 
+			Position position = new Position(node.getX(), node.getY()); 
 
-			if (visited.contains(p)) continue;
-			if (unreachableTargets.contains(p)) continue;
-			if (!isPassable(node)) continue;
+			if (visited.contains(position)) continue;
+			if (unreachableTargets.contains(position)) continue;
+			if (!map.isPassable(node)) continue;
 
-			List<Position> path = findPath(new Position(me.getX(), me.getY()), p, hasTreasure);
+			List<Position> path = findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
 			if (path.isEmpty()) continue;
 
 			int score = path.size();
@@ -256,7 +253,7 @@ public class PathFinder {
 			}
 
 			// after treasure prefer enemy half fields
-			if (hasTreasure && isEnemyHalf(p)) {
+			if (hasTreasure && isEnemyHalf(position)) {
 				score -= 3;
 			}
 
@@ -274,13 +271,13 @@ public class PathFinder {
 		ClientFullMapNode best = null;
 		int bestScore = Integer.MAX_VALUE;
 
-		for (ClientFullMapNode node : nodes.values()) {
+		for (ClientFullMapNode node : map.getMapNodes()) {
 
 			Position position = new Position(node.getX(), node.getY());
 
 			if (!isEnemyHalf(position)) continue;
 			if (unreachableTargets.contains(position)) continue;
-			if (!isPassable(node)) continue;
+			if (!map.isPassable(node)) continue;
 
 			List<Position> path = findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
 			if (path.isEmpty()) continue;
@@ -298,6 +295,8 @@ public class PathFinder {
 
 		return best;
 	}
+	
+
 
 	public EClientMove fallbackMove(ClientFullMapNode me, boolean hasTreasure) {
 		logger.warn("Using fallback move");
@@ -308,11 +307,11 @@ public class PathFinder {
 		int bestScore = Integer.MAX_VALUE;
 
 		for (Position nb : neighbors(p)) {
-			ClientFullMapNode n = nodes.get(nb);
+			ClientFullMapNode node = getNode(nb);
 
-			if (n == null || !isPassable(n)) continue;
+			if (node == null || !map.isPassable(node)) continue;
 
-			int score = terrainCost(n, hasTreasure);
+			int score = terrainCost(node, hasTreasure);
 
 			if (visited.contains(nb)) {
 				score += 5;
@@ -372,9 +371,7 @@ public class PathFinder {
 		);
 	}
 
-	private boolean isPassable(ClientFullMapNode n) {
-		return n.getTerrain() != EClientTerrain.Water;
-	}
+
 
 	private int terrainCost(ClientFullMapNode n, boolean collectedTreasure) {
 
@@ -394,116 +391,20 @@ public class PathFinder {
 		return EClientMove.Right;
 	}
 
-	public ClientFullMapNode findMyPosition() {
-		for (ClientFullMapNode n : nodes.values()) {
-			var pos = n.getPlayerPositionState();
 
-			if (pos == EClientPositionState.MyPlayerPosition ||
-				pos == EClientPositionState.BothPlayerPosition) {
-				return n;
-			}
-		}
-
-		return null;
-	}
-
-	private ClientFullMapNode findTreasure() {
-		for (ClientFullMapNode n : nodes.values()) {
-			if (n.getTreasureState() == EClientTreasureState.MyTreasureIsPresent) {
-				return n;
-			}
-		}
-
-		return null;
-	}
-
-	private ClientFullMapNode findEnemyFort() {
-		for (ClientFullMapNode n : nodes.values()) {
-			if (n.getFortState() == EClientFortState.EnemyFortPresent) {
-				return n;
-			}
-		}
-
-		return null;
-	}
-
-	private ClientFullMapNode findMyFort() {
-		for (ClientFullMapNode n : nodes.values()) {
-			if (n.getFortState() == EClientFortState.MyFortPresent) {
-				return n;
-			}
-		}
-
-		return null;
-	}
-
-	private boolean isHorizontalSplit() {
-		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
-		int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
-
-		for (Position p : nodes.keySet()) {
-			minX = Math.min(minX, p.x());
-			maxX = Math.max(maxX, p.x());
-			minY = Math.min(minY, p.y());
-			maxY = Math.max(maxY, p.y());
-		}
-
-		int width = maxX - minX + 1;
-		int height = maxY - minY + 1;
-
-		return width > height;
-	}
-
-	// TODO: PPut in Fullmap, 
 	private boolean isEnemyHalf(Position p) {
-		ClientFullMapNode fort = findMyFort();
-		if (fort == null) return false;
-
-		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
-		int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
-
-		for (Position pos : nodes.keySet()) {
-			minX = Math.min(minX, pos.x());
-			maxX = Math.max(maxX, pos.x());
-			minY = Math.min(minY, pos.y());
-			maxY = Math.max(maxY, pos.y());
-		}
-
-		if (isHorizontalSplit()) {
-			double middleX = (minX + maxX) / 2.0;
-			boolean myFortIsLeft = fort.getX() < middleX;
-
-			return myFortIsLeft ? p.x() > middleX : p.x() < middleX;
-		} else {
-			double middleY = (minY + maxY) / 2.0;
-			boolean myFortIsTop = fort.getY() < middleY;
-
-			return myFortIsTop ? p.y() > middleY : p.y() < middleY;
-		}
+	    return map != null && map.isEnemyHalf(p.x(), p.y());
 	}
-	// TODO: maybe put it somewhere else
 
+	
+
+	private ClientFullMapNode getNode(Position p) {
+	    return map.getNode(p.x(), p.y());
+	}
+	
 	private int distanceToMapMiddle(Position p) {
-		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
-		int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
-
-		for (Position pos : nodes.keySet()) {
-			minX = Math.min(minX, pos.x());
-			maxX = Math.max(maxX, pos.x());
-			minY = Math.min(minY, pos.y());
-			maxY = Math.max(maxY, pos.y());
-		}
-
-		if (isHorizontalSplit()) {
-			double middleX = (minX + maxX) / 2.0;
-			return (int) Math.abs(p.x() - middleX);
-		} else {
-			double middleY = (minY + maxY) / 2.0;
-			return (int) Math.abs(p.y() - middleY);
-		}
+	    return map.distanceToMapMiddle(p.x(), p.y());
 	}
 
-	public ClientFullMapNode getNode(int x, int y) {
-		return nodes.get(new Position(x, y));
-	}
+	
 }

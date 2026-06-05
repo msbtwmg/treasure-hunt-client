@@ -12,13 +12,14 @@ import client.game.model.ClientGameState;
 import client.game.model.EClientGameState;
 import client.game.model.EClientMove;
 import client.map.HalfMapCreator;
+import client.map.model.ClientFullMap;
 import client.map.model.ClientFullMapNode;
 import client.map.model.ClientHalfMap;
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
 import client.map.placement.DefaultFortPlacement;
-import client.map.placement.EnemyHalfFinder;
-import client.map.placement.EnemyHalfPosition;
+import client.map.placement.FirstHalfPositionFinder;
+import client.map.placement.FirstHalfPosition;
 import client.map.placement.FarFortPlacement;
 import client.map.placement.FortPlacementStrategy;
 import client.map.placement.FortQuarter;
@@ -141,9 +142,11 @@ public class Game {
 	        }
 
 	        if (!preparePathFinder(gameState)) return;
+	        
+	        ClientFullMap map = gameState.getMap(); 
 
-
-	        ClientFullMapNode me = pathFinder.findMyPosition();
+	        ClientFullMapNode me = map.findMyPosition();
+	        
 	        if (me == null) {
 	            logger.warn("My position unknown");
 	            return;
@@ -157,7 +160,6 @@ public class Game {
 	            logger.warn("No safe move possible");
 	            return;
 	        }
-
 	     
 	        sendMove(move);
 
@@ -181,13 +183,13 @@ public class Game {
 
 	        EClientMove move = pathFinder.decideNextMove(hasTreasure);
 
-	        if (move == null || !isMoveSafe(me, move)) {
+	        if (move == null || !isMoveSafe(gameState, me, move)) {
 	            move = pathFinder.fallbackMove(me, hasTreasure);
 	        }
 
-	        if (move == null || !isMoveSafe(me, move)) {
+	       /* if (move == null || !isMoveSafe(gameState, me, move)) {
 	            return null;
-	        }
+	        } */
 
 	        return move;
 	    }
@@ -211,7 +213,7 @@ public class Game {
 	            return false;
 	        }
 
-	        pathFinder.setNodes(gameState.getMapNodes());
+	        pathFinder.setMap(gameState.getMap());
 	        return true;
 	    }
 	    
@@ -251,22 +253,21 @@ public class Game {
 	    }
 	    
 	    private FortPlacementStrategy chooseFortStrategy(ClientGameState gameState) {
+
 	        if (!gameState.isSecondClient()) {
 	            logger.info("First client -> using default fort placement");
 	            return new DefaultFortPlacement();
 	        }
 
-	        EnemyHalfPosition enemyPos = new EnemyHalfFinder().find(gameState.getMapNodes());
+	        FirstHalfPosition firstHalfPosition =  new FirstHalfPositionFinder().find(gameState.getMapNodes());
 
-	        logger.info("Second client -> enemy half is {}", enemyPos);
+	        logger.info("Second client -> first half is {}", firstHalfPosition);
 
-	        return switch (enemyPos) {
-		        case RIGHT  -> new FarFortPlacement(FortQuarter.TOP_LEFT);     // or bottom left
-		        case LEFT   -> new FarFortPlacement(FortQuarter.TOP_RIGHT);    // or  b r
-		        case BOTTOM -> new FarFortPlacement(FortQuarter.TOP_LEFT);     // or t r 
-		        case TOP    -> new FarFortPlacement(FortQuarter.BOTTOM_LEFT);  // or b l 
-		        case ORIGIN -> new FarFortPlacement(FortQuarter.BOTTOM_RIGHT);
-		        case NOTFOUND -> new DefaultFortPlacement(); 
+	        return switch (firstHalfPosition) {
+	            case ORIGIN -> new FarFortPlacement(FortQuarter.BOTTOM_RIGHT);
+	            case RIGHT  -> new FarFortPlacement(FortQuarter.BOTTOM_LEFT);
+	            case BOTTOM -> new FarFortPlacement(FortQuarter.TOP_RIGHT);
+	            case NOTFOUND -> new DefaultFortPlacement();
 	        };
 	    }
 	 
@@ -284,25 +285,10 @@ public class Game {
 	        logger.debug("Move: {}", move);
 	    }
 
-	    private boolean isMoveSafe(ClientFullMapNode me,  EClientMove move) {
-	    	// TODO: add less coupling remove whole gameState, maybe positon statt getX, getY
-			int x = me.getX();
-			int y = me.getY();
-			
-			int nx = x;
-			int ny = y;
-			
-			switch (move) {
-			case Right -> nx++;
-			case Left  -> nx--;
-			case Down  -> ny++;
-			case Up    -> ny--;
-			}
-			
-			ClientFullMapNode target = pathFinder.getNode(nx, ny);
-			
-			return target != null && target.getTerrain() != EClientTerrain.Water;
-		}
+	    private boolean isMoveSafe(ClientGameState gameState, ClientFullMapNode me, EClientMove move) {
+	        ClientFullMap map = gameState.getMap();
+	        return map.isMoveSafe(me, move);
+	    }
 	    
 	    private boolean validateHalfMap() {
 
