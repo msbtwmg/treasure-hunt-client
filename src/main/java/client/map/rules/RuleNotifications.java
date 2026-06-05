@@ -30,9 +30,6 @@ public class RuleNotifications {
         return Collections.unmodifiableList(errors);
     }
     
-    /**
-     * Error message combination
-     */
     public String errorInformation() {
         return errors.stream()
                 .map(RuleError::getMessage)

@@ -1,10 +1,7 @@
 package client.map.model;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
-import client.AI.PathFinder.Position;
 import client.game.model.EClientMove;
 
 public class ClientFullMap {
