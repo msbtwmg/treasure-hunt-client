@@ -35,6 +35,7 @@ public class PathFinder {
 	public void setMap(ClientFullMap fullMap) {
 	    this.map = fullMap;
 	}
+	
 
 
 	/**
@@ -45,83 +46,130 @@ public class PathFinder {
 	 */
 
 	public EClientMove decideNextMove(boolean hasTreasure) {
-		logger.debug("~ Deciding next move");
+	    if (!hasUsableMap()) return EClientMove.Right;
 
-		if (map == null || map.getMapNodes().isEmpty()) return EClientMove.Right;
+	    ClientFullMapNode me = map.findMyPosition();
+	    if (me == null) return EClientMove.Right;
 
-		ClientFullMapNode me = map.findMyPosition();
-		if (me == null) return EClientMove.Right;
+	    Position myPos = new Position(me.getX(), me.getY());
 
-		Position myPos = new Position(me.getX(), me.getY());
+	    updatePositionMemory(myPos);
+	    resetTarget(me);
+	    resetTargetWhenStuck();
 
-		updatePositionMemory(myPos);
+	    chooseTarget(me, myPos, hasTreasure);
 
-		// reset if target reached
-		if (currentTarget != null &&
-			currentTarget.getX() == me.getX() &&
-			currentTarget.getY() == me.getY()) {
+	    EClientMove move = moveToCurrentTarget(me, hasTreasure);
 
+	    if (move != null) {
+	        return move;
+	    }
+
+	    return fallbackMove(me, hasTreasure);
+	}
+	
+	
+	private boolean hasUsableMap() {
+		return map != null && map.hasNodes();
+	}
+	
+	private void resetTarget(ClientFullMapNode me) {
+		if (currentTarget == null) {
+			return; 
+		}
+		
+		boolean targetReached  = currentTarget.getX() == me.getX() 
+									&& currentTarget.getY() == me.getY();
+
+		if (targetReached) {
 			logger.debug("Target reached");
 			currentTarget = null;
 		}
 
-		// only reset when stuck for multiple turns
-		
-		if (stuckCounter >= 3) {
-			logger.warn("Probably stuck ..resetting target");
-
-			if (currentTarget != null && !isImportantTarget(currentTarget)) {
-				unreachableTargets.add(new Position(currentTarget.getX(), currentTarget.getY()));
-			}
-
-			currentTarget = null;
-			stuckCounter = 0;
-		}
-
-		// selecting target
-		if (currentTarget == null) {
-
-			if (!hasTreasure) {
-				logger.debug("Searching for treasure..");
-
-				ClientFullMapNode treasure = map.findTreasure();
-				currentTarget = (treasure != null) ? treasure: findClosestUnvisited(me, hasTreasure);
-			}
-
-			else if (!isEnemyHalf(myPos)) {
-				logger.debug("Crossing to enemy half..");
-				currentTarget = findClosestEnemyHalfEntry(me, hasTreasure);
-			}
-
-			else {
-				logger.debug("Searching for enemy fort...");
-
-				ClientFullMapNode fort = map.findEnemyFort();
-				currentTarget = (fort != null)
-						? fort
-						: findClosestUnvisited(me, hasTreasure);
-			}
-		}
-
-		if (currentTarget != null) {
-			EClientMove step = nextStep(me, currentTarget, hasTreasure);
-
-			if (step != null) {
-				logger.debug("Moving to target ({}, {})", currentTarget.getX(), currentTarget.getY());
-				return step;
-			}
-
-			logger.warn("Target not reachable , resetting");
-
-			if (!isImportantTarget(currentTarget)) {
-				unreachableTargets.add(new Position(currentTarget.getX(), currentTarget.getY()));
-			}
-
-			currentTarget = null;
-		}
-		// Fallback in case the others fail
-		return fallbackMove(me, hasTreasure);
 	}
+	
+	private void resetTargetWhenStuck()   {
+		if (stuckCounter < 3) {
+			return; 
+		}
+		
+		logger.warn("Probably stuck ..resetting target");
+	
+		if (currentTarget != null && !isImportantTarget(currentTarget)) {
+			unreachableTargets.add(new Position(currentTarget.getX(), currentTarget.getY()));
+		}
+		currentTarget = null;
+		stuckCounter = 0;
+	}
+	
+	private void chooseTarget(ClientFullMapNode me, Position myPos, boolean hasTreasure) {
+	    if (currentTarget != null) {
+	        return;
+	    }
+
+	    if (!hasTreasure) {
+	        currentTarget = chooseTreasureTarget(me);
+	        return;
+	    }
+
+	    if (!isEnemyHalf(myPos)) {
+	        currentTarget = findClosestEnemyHalfEntry(me, hasTreasure);
+	        return;
+	    }
+
+	    currentTarget = chooseEnemyFortTarget(me, hasTreasure);
+	}
+	
+	private ClientFullMapNode chooseTreasureTarget(ClientFullMapNode me) {
+	    logger.debug("Searching for treasure..");
+
+	    ClientFullMapNode treasure = map.findTreasure();
+
+	    if (treasure != null) {
+	        return treasure;
+	    }
+
+	    return findClosestUnvisited(me, false);
+	}
+	private ClientFullMapNode chooseEnemyFortTarget(ClientFullMapNode me, boolean hasTreasure) {
+	    logger.debug("Searching for enemy fort...");
+
+	    ClientFullMapNode fort = map.findEnemyFort();
+
+	    if (fort != null) {
+	        return fort;
+	    }
+
+	    return findClosestUnvisited(me, hasTreasure);
+	}
+	
+	private EClientMove moveToCurrentTarget(ClientFullMapNode me, boolean hasTreasure) {
+	    if (currentTarget == null) {
+	        return null;
+	    }
+
+	    EClientMove step = nextStep(me, currentTarget, hasTreasure);
+
+	    if (step != null) {
+	        logger.debug("Moving to target ({}, {})",
+	                currentTarget.getX(),
+	                currentTarget.getY());
+
+	        return step;
+	    }
+
+	    logger.warn("Target not reachable , resetting");
+
+	    if (!isImportantTarget(currentTarget)) {
+	        unreachableTargets.add(new Position(
+	                currentTarget.getX(),
+	                currentTarget.getY()));
+	    }
+
+	    currentTarget = null;
+	    return null;
+	}
+	
 
 	/**
 	 * Computes the next move using Dijkstra

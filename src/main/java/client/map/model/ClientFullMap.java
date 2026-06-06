@@ -57,7 +57,6 @@ public class ClientFullMap {
 }
     
 	
-	// TODO: from Pathfinder -> here. check Aufrufe and change them
     public boolean isEnemyHalf(int x, int y) {
         ClientFullMapNode fort = findMyFort();
 
@@ -78,8 +77,6 @@ public class ClientFullMap {
         return myFortIsTop ? y >= middleY : y < middleY;
     }
 	
-	
-	  //TODO: maybe mit Stream später ändern, andere mit for loop auch
     private ClientFullMapNode findMyFort() {
         for (ClientFullMapNode node : nodes) {
             if (node.getFortState() == EClientFortState.MyFortPresent) {
@@ -150,6 +147,10 @@ public class ClientFullMap {
 	
 	public boolean isPassable(ClientFullMapNode node) {
 		return node.getTerrain() != EClientTerrain.Water;
+	}
+	
+	public boolean hasNodes() {
+	    return !nodes.isEmpty();
 	}
 
 }
