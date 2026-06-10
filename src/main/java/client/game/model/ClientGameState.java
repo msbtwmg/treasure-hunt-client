@@ -29,7 +29,6 @@ public class ClientGameState {
 	        this.collectedTreasure = collectedTreasure;
 	    }
 
-	//TODO: add more better methods for kapselung
     public int getX() {
 		return x;
 	}

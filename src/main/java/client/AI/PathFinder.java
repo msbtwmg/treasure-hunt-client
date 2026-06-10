@@ -1,39 +1,38 @@
 package client.AI;
 
-import java.util.*;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import client.game.model.ClientGameState;
 import client.game.model.EClientMove;
-import client.map.MapHelper;
 import client.map.model.ClientFullMap;
 import client.map.model.ClientFullMapNode;
 import client.map.model.EClientFortState;
-import client.map.model.EClientPositionState;
 import client.map.model.EClientTerrain;
 import client.map.model.EClientTreasureState;
+
 
 public class PathFinder {
 	private static final Logger logger = LoggerFactory.getLogger(PathFinder.class);
 
 	private ClientFullMapNode currentTarget;
 	private ClientFullMap map;
+	
+	private final PathMemory memory = new PathMemory();
+	private final TerrainCost terrainCost = new TerrainCost();
 
-	private final Set<Position> visited = new HashSet<>();
-	private final Set<Position> unreachableTargets = new HashSet<>();
-	private final Deque<Position> recentPositions = new ArrayDeque<>();
+	private DijkstraSearch dijkstraSearch;
+	
+	// remember enemy position after these amoutn of moves 
+	private static final int MOVES = 10;
 
-	private Position lastPosition;
-	private int stuckCounter = 0;
-
-	private static final int MAX_RECENT_POSITIONS = 6;
-
-	public record Position(int x, int y) {}
+	private int moveCounter = 0;
+	private Position enemyPosition;
 
 	public void setMap(ClientFullMap fullMap) {
 	    this.map = fullMap;
+	    this.dijkstraSearch = new DijkstraSearch(fullMap, memory);
 	}
 	
 
@@ -52,8 +51,11 @@ public class PathFinder {
 	    if (me == null) return EClientMove.Right;
 
 	    Position myPos = new Position(me.getX(), me.getY());
+	    
+	    moveCounter++;
+	    rememberEnemyPosition();
 
-	    updatePositionMemory(myPos);
+	    memory.updatePosition(myPos);
 	    resetTarget(me);
 	    resetTargetWhenStuck();
 
@@ -68,6 +70,29 @@ public class PathFinder {
 	    return fallbackMove(me, hasTreasure);
 	}
 	
+	private void rememberEnemyPosition() {
+
+		if (moveCounter < MOVES) {
+			return;
+		}
+
+		if (enemyPosition != null) {
+			return;
+		}
+
+		ClientFullMapNode enemy = map.findEnemyPosition();
+
+		if (enemy == null) {
+			return;
+		}
+
+		enemyPosition = new Position(enemy.getX(), enemy.getY());
+
+		logger.debug("Remembered enemy position after {} moves: ({}, {})",
+				moveCounter,
+				enemyPosition.x(),
+				enemyPosition.y());
+	}
 	
 	private boolean hasUsableMap() {
 		return map != null && map.hasNodes();
@@ -81,47 +106,79 @@ public class PathFinder {
 		boolean targetReached  = currentTarget.getX() == me.getX() 
 									&& currentTarget.getY() == me.getY();
 
-		if (targetReached) {
-			logger.debug("Target reached");
-			currentTarget = null;
+		if (!targetReached) {
+			return;
 		}
+	
+		logger.debug("Target reached");
+		
+		
+		if (enemyPosition != null &&
+			    enemyPosition.x() == currentTarget.getX() &&
+			    enemyPosition.y() == currentTarget.getY()) {
+			
+			logger.debug("Reached remembered enemy position");
+			enemyPosition = null;
+			}
+		
+		currentTarget = null;
 
 	}
 	
 	private void resetTargetWhenStuck()   {
-		if (stuckCounter < 3) {
+		if (!memory.isStuck()) {
 			return; 
 		}
 		
 		logger.warn("Probably stuck ..resetting target");
 	
 		if (currentTarget != null && !isImportantTarget(currentTarget)) {
-			unreachableTargets.add(new Position(currentTarget.getX(), currentTarget.getY()));
+			memory.addUnreachableTarget(new Position(currentTarget.getX(), currentTarget.getY()));
 		}
 		currentTarget = null;
-		stuckCounter = 0;
+		memory.resetStuckCounter();
 	}
 	
+	
 	private void chooseTarget(ClientFullMapNode me, Position myPos, boolean hasTreasure) {
-	    if (currentTarget != null) {
-	        return;
-	    }
+		if (currentTarget != null) {
+			return;
+		}
 
-	    if (!hasTreasure) {
-	        currentTarget = chooseTreasureTarget(me);
-	        return;
-	    }
+		if (!hasTreasure) {
+			currentTarget = chooseTreasureTarget(me);
+			return;
+		}
 
+	    /*
 	    if (!isEnemyHalf(myPos)) {
 	        currentTarget = findClosestEnemyHalfEntry(me, hasTreasure);
 	        return;
 	    }
+	     */
+	    
+	
+		if (enemyPosition != null) {
+			ClientFullMapNode enemyNode = map.getNode(enemyPosition.x(), enemyPosition.y());
 
-	    currentTarget = chooseEnemyFortTarget(me, hasTreasure);
+			if (enemyNode != null && map.isPassable(enemyNode)) {
+				logger.debug("Returning to remembered enemy position ({}, {})",
+						enemyPosition.x(),
+						enemyPosition.y());
+
+				currentTarget = enemyNode;
+				return;
+			}
+
+			enemyPosition = null;
+		}
+
+		currentTarget = chooseEnemyFortTarget(me, hasTreasure);
 	}
 	
+
 	private ClientFullMapNode chooseTreasureTarget(ClientFullMapNode me) {
-	    logger.debug("Searching for treasure..");
+	    logger.debug("Searching for treasure...");
 
 	    ClientFullMapNode treasure = map.findTreasure();
 
@@ -161,7 +218,7 @@ public class PathFinder {
 	    logger.warn("Target not reachable , resetting");
 
 	    if (!isImportantTarget(currentTarget)) {
-	        unreachableTargets.add(new Position(
+	       memory.addUnreachableTarget(new Position(
 	                currentTarget.getX(),
 	                currentTarget.getY()));
 	    }
@@ -170,7 +227,7 @@ public class PathFinder {
 	    return null;
 	}
 	
-
+	//TODO: IN EIGENE CLASS VLLT: move finder or Moveselector 
 	/**
 	 * Computes the next move using Dijkstra
 	 * 
@@ -184,7 +241,7 @@ public class PathFinder {
 		Position startPos = new Position(start.getX(), start.getY());
 		Position targetPos = new Position(target.getX(), target.getY());
 
-		List<Position> path = findPath(startPos, targetPos, collectedTreasure);
+		List<Position> path = dijkstraSearch.findPath(startPos, targetPos, collectedTreasure);
 
 		if (path.isEmpty()) {
 			logger.warn("No path found to target ({}, {})", target.getX(), target.getY());
@@ -195,88 +252,7 @@ public class PathFinder {
 		return direction(startPos, step);
 	}
 
-	/**
-	 * Finds the path using Dijkstra
-	 * 
-	 * @param start start position
-	 * @param target target position
-	 * @param collectedTreasure for terrain costs
-	 * @return list of positions without start, first element is next step
-	 */
-	private List<Position> findPath(Position start, Position target, boolean collectedTreasure) {
-
-		if (start.equals(target)) {
-			return List.of();
-		}
-
-		Map<Position, Integer> dist = new HashMap<>();
-		Map<Position, Position> prev = new HashMap<>();
-
-		class Node {
-			Position pos;
-			int distances;
-
-			Node(Position p, int d) {
-				pos = p;
-				distances = d;
-			}
-		}
-
-		PriorityQueue<Node> pq = new PriorityQueue<>(Comparator.comparingInt(n -> n.distances));
-
-		dist.put(start, 0);
-		pq.add(new Node(start, 0));
-
-		while (!pq.isEmpty()) {
-			Node curNode = pq.poll();
-			Position cur = curNode.pos;
-
-			if (curNode.distances != dist.get(cur)) continue;
-			if (cur.equals(target)) break;
-
-			for (Position nb : neighbors(cur)) {
-
-				ClientFullMapNode node = getNode(nb);
-				if (node == null || !map.isPassable(node)) continue;
-
-				int cost = terrainCost(node, collectedTreasure);
-
-				// Avoiding already visited tiles
-				if (visited.contains(nb)) {
-					cost += 4;
-				}
-
-				// Avoiding loop
-				if (recentPositions.contains(nb)) {
-					cost += 6;
-				}
-
-				int nd = dist.get(cur) + cost;
-
-				if (nd < dist.getOrDefault(nb, Integer.MAX_VALUE)) {
-					dist.put(nb, nd);
-					prev.put(nb, cur);
-					pq.add(new Node(nb, nd));
-				}
-			}
-		}
-
-		if (!prev.containsKey(target)) {
-			return List.of();
-		}
-
-		List<Position> path = new ArrayList<>();
-		Position step = target;
-
-		while (!step.equals(start)) {
-			path.add(step);
-			step = prev.get(step);
-		}
-
-		Collections.reverse(path);
-		return path;
-	}
-
+	
 	private ClientFullMapNode findClosestUnvisited(ClientFullMapNode me, boolean hasTreasure) {
 
 		ClientFullMapNode best = null;
@@ -286,11 +262,11 @@ public class PathFinder {
 
 			Position position = new Position(node.getX(), node.getY()); 
 
-			if (visited.contains(position)) continue;
-			if (unreachableTargets.contains(position)) continue;
+			if (memory.visited(position)) continue;
+			if (memory.isUnreachableTarget(position)) continue;
 			if (!map.isPassable(node)) continue;
 
-			List<Position> path = findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
+			List<Position> path = dijkstraSearch.findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
 			if (path.isEmpty()) continue;
 
 			int score = path.size();
@@ -313,7 +289,7 @@ public class PathFinder {
 
 		return best;
 	}
-
+/*
 	private ClientFullMapNode findClosestEnemyHalfEntry(ClientFullMapNode me, boolean hasTreasure) {
 
 		ClientFullMapNode best = null;
@@ -324,10 +300,10 @@ public class PathFinder {
 			Position position = new Position(node.getX(), node.getY());
 
 			if (!isEnemyHalf(position)) continue;
-			if (unreachableTargets.contains(position)) continue;
+			if (memory.isUnreachableTarget(position)) continue;
 			if (!map.isPassable(node)) continue;
 
-			List<Position> path = findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
+			List<Position> path = dijkstraSearch.findPath(new Position(me.getX(), me.getY()), position, hasTreasure);
 			if (path.isEmpty()) continue;
 
 			int score = path.size();
@@ -344,39 +320,39 @@ public class PathFinder {
 		return best;
 	}
 	
-
-
-	public EClientMove fallbackMove(ClientFullMapNode me, boolean hasTreasure) {
-		logger.warn("Using fallback move");
+*/
+	private int fallbackMoveCount = 0;
+	public EClientMove fallbackMove(ClientFullMapNode me, boolean collectedTreasure) {
+		fallbackMoveCount++; 
+		logger.warn("Using fallback move {} times", fallbackMoveCount);
 
 		Position p = new Position(me.getX(), me.getY());
 
 		Position best = null;
 		int bestScore = Integer.MAX_VALUE;
 
-		for (Position nb : neighbors(p)) {
-			ClientFullMapNode node = getNode(nb);
+		for (Position neighbor : neighbors(p)) {
+			ClientFullMapNode node = getNode(neighbor);
 
 			if (node == null || !map.isPassable(node)) continue;
 
-			int score = terrainCost(node, hasTreasure);
+			int score = terrainCost.getCost(node, collectedTreasure);
 
-			if (visited.contains(nb)) {
+			if (memory.visited(neighbor)) {
 				score += 5;
 			}
 
-			if (recentPositions.contains(nb)) {
+			if (memory.recentlyVisited(neighbor)) {
 				score += 10;
 			}
 
-			// after treasure we prefer moving into enemy half
-			if (hasTreasure && isEnemyHalf(nb)) {
+			if (collectedTreasure && isEnemyHalf(neighbor)) {
 				score -= 4;
 			}
 
 			if (score < bestScore) {
 				bestScore = score;
-				best = nb;
+				best = neighbor;
 			}
 		}
 
@@ -387,23 +363,6 @@ public class PathFinder {
 		return EClientMove.Right;
 	}
 
-	private void updatePositionMemory(Position myPos) {
-
-		if (lastPosition != null && lastPosition.equals(myPos)) {
-			stuckCounter++;
-		} else {
-			stuckCounter = 0;
-		}
-
-		visited.add(myPos);
-		lastPosition = myPos;
-
-		recentPositions.addLast(myPos);
-
-		while (recentPositions.size() > MAX_RECENT_POSITIONS) {
-			recentPositions.removeFirst();
-		}
-	}
 
 	private boolean isImportantTarget(ClientFullMapNode node) {
 		return node.getTreasureState() == EClientTreasureState.MyTreasureIsPresent ||
@@ -419,17 +378,6 @@ public class PathFinder {
 		);
 	}
 
-
-
-	private int terrainCost(ClientFullMapNode n, boolean collectedTreasure) {
-
-		return switch (n.getTerrain()) {
-			case Grass -> collectedTreasure ? 1 : 3;
-			case Mountain -> collectedTreasure ? 4 : 1; // High Mountain priority before finding treasure
-			case Water -> Integer.MAX_VALUE / 4;
-		};
-	}
-
 	private EClientMove direction(Position from, Position to) {
 		if (to.x() == from.x() + 1) return EClientMove.Right;
 		if (to.x() == from.x() - 1) return EClientMove.Left;
@@ -443,8 +391,6 @@ public class PathFinder {
 	private boolean isEnemyHalf(Position p) {
 	    return map != null && map.isEnemyHalf(p.x(), p.y());
 	}
-
-	
 
 	private ClientFullMapNode getNode(Position p) {
 	    return map.getNode(p.x(), p.y());

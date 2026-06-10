@@ -125,6 +125,19 @@ public class ClientFullMap {
 
 		return null;
 	}
+	
+	public ClientFullMapNode findEnemyPosition() {
+		for (ClientFullMapNode node : nodes) {
+			EClientPositionState position = node.getPlayerPositionState();
+
+			if (position == EClientPositionState.EnemyPlayerPosition ||
+				position == EClientPositionState.BothPlayerPosition) {
+				return node;
+			}
+		}
+
+		return null;
+	}
 	public ClientFullMapNode findTreasure() {
 		for (ClientFullMapNode node : getMapNodes()) {
 			if (node.getTreasureState() == EClientTreasureState.MyTreasureIsPresent) {

@@ -80,7 +80,6 @@ public final class GameStateConverter {
 	            break;
 	        }
 	    }
-	    // TODO: check mistake with 2 hasTreasure, one should be when viisble other if collected
 	    return new ClientGameState(
 	            fullMap,
 	            x,

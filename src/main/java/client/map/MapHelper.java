@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.Queue;
 
+import client.AI.Position;
 import client.AI.PathFinder;
 import client.map.model.ClientFullMapNode;
 import client.map.model.EClientFortState;
@@ -143,7 +144,7 @@ public class MapHelper {
     }
     
     // gamestate statt Positio n TODO: Kontrolle Test  position 
-    public static ClientFullMapNode findMyPosition(Map<PathFinder.Position, ClientFullMapNode> nodes) {
+    public static ClientFullMapNode findMyPosition(Map<Position, ClientFullMapNode> nodes) {
 
         if (nodes == null || nodes.isEmpty()) {
             return null;
@@ -168,6 +169,5 @@ public class MapHelper {
 
         return grid[fortY][fortX] == EClientTerrain.Grass;
     }
-    
-    
+
 }

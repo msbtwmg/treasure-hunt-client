@@ -68,7 +68,6 @@ class GameStateConverter_Tests {
 	    }
 	 
 
-	 //TODO: Check ob ich richtig gedacht hab und  es sinn macht
 	 @Test
 	 public void clientMove_shouldCreateCorrectPlayerMove() {
 		 String testPlayerId = "TestPlayerId";
