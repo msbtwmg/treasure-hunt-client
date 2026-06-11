@@ -12,20 +12,20 @@ import org.junit.jupiter.api.Test;
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
 import client.map.placement.DefaultFortPlacement;
+import exceptions.HalfMapGenerationException;
 public class HalfMapCreator_Tests {
 
     private HalfMapCreator creator;
-
+    List<ClientHalfMapNode> result;
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws HalfMapGenerationException {
         creator = new HalfMapCreator(new DefaultFortPlacement());
-        
+		result = creator.createHalfMap();
+
     }
 
     @Test
     public void createHalfMap_shouldCreate50Nodes() {
-      
-        List<ClientHalfMapNode> result = creator.createHalfMap();
     
         assertEquals(50, result.size());
     }
@@ -33,8 +33,6 @@ public class HalfMapCreator_Tests {
     @Test
     public void createHalfMap_shouldCreateOneFort() {
       
-        List<ClientHalfMapNode> result = creator.createHalfMap();
-
     
         long fortCount = result.stream()
                 .filter(node -> node.myFortPresent())
@@ -46,8 +44,6 @@ public class HalfMapCreator_Tests {
     @Test
     public void createHalfMap_shouldCreateEnoughGrass() {
       
-        List<ClientHalfMapNode> result = creator.createHalfMap();
-
        
         long grassCount = result.stream()
                 .filter(node -> node.getTerrain() == EClientTerrain.Grass)
@@ -59,8 +55,6 @@ public class HalfMapCreator_Tests {
     @Test
     public void createHalfMap_shouldCreateEnoughWater() {
     
-        List<ClientHalfMapNode> result = creator.createHalfMap();
-
      
         long waterCount = result.stream()
                 .filter(node -> node.getTerrain() == EClientTerrain.Water)
@@ -72,8 +66,6 @@ public class HalfMapCreator_Tests {
     @Test
     public void createHalfMap_shouldCreateEnoughMountains() {
       
-        List<ClientHalfMapNode> result = creator.createHalfMap();
-
         long mountainCount = result.stream()
                 .filter(node -> node.getTerrain() == EClientTerrain.Mountain)
                 .count();
@@ -84,7 +76,6 @@ public class HalfMapCreator_Tests {
     @RepeatedTest(10)
     public void createHalfMap_repeated_shouldAlwaysCreateValidSize() {
       
-        List<ClientHalfMapNode> result = creator.createHalfMap();
 
        
         assertEquals(50, result.size());

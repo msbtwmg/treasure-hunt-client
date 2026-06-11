@@ -160,7 +160,7 @@ public final class GameStateConverter {
             case Right -> EMove.Right;
         };
     }
-    // TODO: better method name vllt  toServerPlayerMove, createPlayerMove. 
+
     public static PlayerMove toServerClientMove(String playerId, EClientMove move) {
         final EMove movement = toServerMove(move);
         return PlayerMove.of(playerId, movement);

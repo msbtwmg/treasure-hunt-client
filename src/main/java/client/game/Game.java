@@ -31,6 +31,8 @@ import client.map.rules.TerrainRule;
 import client.network.ClientNetwork;
 import client.network.converter.GameStateConverter;
 import client.network.converter.HalfMapConverter;
+import exceptions.HalfMapGenerationException;
+import exceptions.UnsafeMoveException;
 
 
 public class Game {
@@ -131,13 +133,19 @@ public class Game {
 	        if (tooManyMoves()) return;
 
 	        if (!sentMap) {
-				createHalfMap(gameState);
-				
-	            sendMap();
-	            
-	            logger.debug("Map sent ({} ms)", System.currentTimeMillis() - start);
-	            return;
+	        	try {
+					createHalfMap(gameState);
+		            sendMap();
+	        	} catch (HalfMapGenerationException e) {
+	        		
+	        		logger.error("Couldnt create half map", e);
+	        		running = false;
+		            return;
+	        	}
+	        	logger.debug("Map sent ({} ms)", System.currentTimeMillis() - start);
+	        	return;
 	        }
+	        
 
 	        if (!preparePathFinder(gameState)) return;
 	        
@@ -152,13 +160,16 @@ public class Game {
 
 	        rememberPosition(me);
 	        
-	        EClientMove move = chooseMove(gameState, me);
+	        EClientMove move;
 	        
-	        if (move == null) {
-	            logger.warn("No safe move possible");
-	            return;
+	        try {
+	        	move = chooseMove(gameState, me);
+	        } catch (UnsafeMoveException e) {
+	        	logger.error("No safe move possible", e);
+	        	running = false;
+	        	return;
 	        }
-	     
+	        
 	        sendMove(move);
 
 	        logDecisionTime(start, gameState.collectedTreasure());
@@ -196,10 +207,7 @@ public class Game {
 	        int x = me.getX();
 	        int y = me.getY();
 
-	        if (x == lastX && y == lastY) {
-	            logger.debug("Still on same tile (possible stuck)");
-	        }
-
+	 
 	        lastX = x;
 	        lastY = y;
 	    }
@@ -240,7 +248,7 @@ public class Game {
 	        sentMap = true;
 	    }
 	    
-	    private void createHalfMap(ClientGameState gameState) {
+	    private void createHalfMap(ClientGameState gameState) throws HalfMapGenerationException {
 	        if (halfMap != null) return;
 
 

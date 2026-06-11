@@ -143,7 +143,7 @@ public class MapHelper {
         return x == 0 || y == 0 || x == width - 1 || y == height - 1;
     }
     
-    // gamestate statt Positio n TODO: Kontrolle Test  position 
+   
     public static ClientFullMapNode findMyPosition(Map<Position, ClientFullMapNode> nodes) {
 
         if (nodes == null || nodes.isEmpty()) {

@@ -10,7 +10,7 @@ import client.game.StateView;
 import client.game.ValidationView;
 import client.map.MapView;
 import client.network.ClientNetwork;
-import exceptions.InvalidArgumentsException;
+import exceptions.UnsafeMoveException;
 
 
 
@@ -28,7 +28,7 @@ public class MainClient {
 	   
         try {
             if (args.length < 3) {
-                throw new InvalidArgumentsException(
+                throw new UnsafeMoveException(
                         "Not enough start parameters: " + args.length);
             }
 
@@ -46,7 +46,7 @@ public class MainClient {
                     USERNAME
             );
 
-          
+           
             ClientNetwork network = new ClientNetwork(config);
             String playerId = network.registerPlayer().getUniquePlayerID();
 
@@ -66,7 +66,7 @@ public class MainClient {
             game.play();
 
         }
-        catch (InvalidArgumentsException e) {
+        catch (UnsafeMoveException e) {
             logger.error("Invalid Arguments: {}", e.getMessage());
         }
         catch (Exception e) {

@@ -38,8 +38,6 @@ public class MapView {
             maxY = Math.max(maxY, node.getY());
         }
 
-        // TODO: replace with  ClientFullMap logic  MAPHELPER
-        //Unknown full map width height , row by row visualising
         for (int y = 0; y <= maxY; y++) {
             for (int x = 0; x <= maxX; x++) {
                 System.out.print(renderField(map, x, y));

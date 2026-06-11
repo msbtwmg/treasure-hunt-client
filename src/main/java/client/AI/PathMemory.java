@@ -51,7 +51,7 @@ public class PathMemory {
 	}
 
 	public boolean isStuck() {
-		return stuckCounter >= 3;
+		return stuckCounter >= 6;
 	}
 
 	public void resetStuckCounter() {

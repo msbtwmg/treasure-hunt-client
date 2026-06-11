@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import client.map.model.ClientHalfMapNode;
 import client.map.model.EClientTerrain;
 import client.map.placement.FortPlacementStrategy;
+import exceptions.HalfMapGenerationException;
 
 public class HalfMapCreator {
 
@@ -37,7 +38,7 @@ public class HalfMapCreator {
     }
 
    
-    public List<ClientHalfMapNode> createHalfMap() {
+    public List<ClientHalfMapNode> createHalfMap() throws HalfMapGenerationException {
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
 
@@ -65,8 +66,9 @@ public class HalfMapCreator {
             return List.copyOf(nodeMap.values());
         }
 
-        throw new RuntimeException("Could not create valid half map after " + maxAttempts + " attempts");
+        throw new HalfMapGenerationException("Could not create valid half map after " + maxAttempts + " attempts");
     }
+    
 
     /**
      * Generating the randomized terrain grid + minimum distribution of grass water and mountain 

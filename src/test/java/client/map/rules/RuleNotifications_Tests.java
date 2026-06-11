@@ -29,4 +29,7 @@ public class RuleNotifications_Tests {
 	    	assertTrue(notifications.hasError());
 	    	assertEquals(1, notifications.getErrors().size()); 
 	    }
+	    
+	    // TODO: mock? 
+
 }
