@@ -37,7 +37,13 @@ public class HalfMapCreator {
         this.fortPlacementStrategy = fortPlacementStrategy;
     }
 
-   
+   /**
+    * Creates a random half map and checks the map rules.
+    * If no valid map is found the client stops with HalfMapGenerationException
+    * 
+    * @return list of map nodes
+    * @throws HalfMapGenerationException if only invalid maps were created
+    */
     public List<ClientHalfMapNode> createHalfMap() throws HalfMapGenerationException {
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -114,7 +120,11 @@ public class HalfMapCreator {
         }
     }
 
-    // checks how efficient the map is for movement
+    /**
+     * Checks how efficient the map is for movement, gives a penalty for dead ends for the pathfinding
+     * @param grid
+     * @return penalty score
+     */
     private int evaluateMap(EClientTerrain[][] grid) {
         int penalty = 0;
 

@@ -8,6 +8,8 @@ import java.util.Set;
 public class PathMemory {
 
 	private static final int MAX_RECENT_POSITIONS = 6;
+	private static final int STUCK_LIMIT = 6;
+	
 
 	private final Set<Position> visited = new HashSet<>();
 	private final Set<Position> unreachableTargets = new HashSet<>();
@@ -51,7 +53,7 @@ public class PathMemory {
 	}
 
 	public boolean isStuck() {
-		return stuckCounter >= 6;
+		return stuckCounter >= STUCK_LIMIT;
 	}
 
 	public void resetStuckCounter() {
