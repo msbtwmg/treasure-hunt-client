@@ -15,7 +15,7 @@ This university project is the client side of a treasure hunt game made as part 
 
 <br>
 
-##### Credits
+##### Sources
 
 - Emojis: https://www.unicode.org/emoji/charts/full-emoji-list.html
 - Flood Fill Algorithm: https://www.geeksforgeeks.org/dsa/flood-fill-algorithm/
@@ -24,7 +24,6 @@ This university project is the client side of a treasure hunt game made as part 
 - Open-Closed Principle: https://www.theserverside.com/tip/How-to-apply-the-open-closed-principle-in-Java
 - Functional Interfaces: https://www.baeldung.com/java-8-functional-interfaces
 - Java Generics: https://www.baeldung.com/java-generics
-- Generic Observer Pattern: https://stackoverflow.com/questions/13362636/a-generic-observer-pattern-in-java
 - Deque Interface: https://www.geeksforgeeks.org/java/deque-interface-java-example/
 - Parameterized Tests with JUnit 5: https://mikemybytes.com/2021/10/19/parameterize-like-a-pro-with-junit-5-csvsource/
 - Java Streams: https://stackify.com/streams-guide-java-8/
