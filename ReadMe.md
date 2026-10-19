@@ -1,25 +1,31 @@
-# Project Setup Instructions
+# Treasure Hunt Client
 
-## Where to Store This Project
+This university project is the client side of a treasure hunt game made as part of a software engineering project. The code in `src/` was written by me as part of the project.
 
-1. **Clone your GitLab Repository** first.
-2. **Locate the folder** that is intended for storing your Client project's implementation.
-3. **Extract the compressed file** and copy this starting project accordingly into the folder from step 2.
+### Focus / Requirements
 
-## How to Import This Project into Eclipse
+- Design Patterns: MVC, custom Observer pattern, Notification Pattern
+- Algorithms: Dijkstra shortest path, Flood Fill
+- Network: Client-Server communication 
+- Testing: Unit tests, parameterized tests, mocking (Mockito) 
+- Code Quality: Refactoring, logging, exception handling
+- Software Design : CLI Visualisation, low coupling and high cohesion
 
-1. **Start Eclipse**
-2. **File -> Import**
-3. **Select Gradle -> Existing Gradle Project**
-4. **Select the root folder of this project**
-   - The correct root folder is the folder where this ReadMe file is stored.
-5. **Press "Next", then "Finish"**
-   - Wait till a) Gradle configuration and b) Gradle based library (dependency) download is finished.
-   - An Internet connection is required for b).
 
-## Description
 
-This project provides a foundation for your own implementation of the Client. Import it in Eclipse to get an excellent starting point (mandatory). You will only need to add your own classes, code, and so on, as all the build management is already configured nicely along with the integration of the provided network message implementation.
+<br>
 
-It is recommended that you also read the comments provided inside the classes. They give tips and help you understand the provided example code. The latter code, e.g., shows you how to use and implement the network communication with the provided server implementation.
+##### Credits
 
+- Emojis: https://www.unicode.org/emoji/charts/full-emoji-list.html
+- Flood Fill Algorithm: https://www.geeksforgeeks.org/dsa/flood-fill-algorithm/
+- Dijkstra's Shortest Path: https://www.geeksforgeeks.org/java/dijkstras-shortest-path-algorithm-in-java-using-priorityqueue/
+- Java Concepts: https://docs.oracle.com/javase/tutorial/java/concepts/
+- Open-Closed Principle: https://www.theserverside.com/tip/How-to-apply-the-open-closed-principle-in-Java
+- Functional Interfaces: https://www.baeldung.com/java-8-functional-interfaces
+- Java Generics: https://www.baeldung.com/java-generics
+- Generic Observer Pattern: https://stackoverflow.com/questions/13362636/a-generic-observer-pattern-in-java
+- Deque Interface: https://www.geeksforgeeks.org/java/deque-interface-java-example/
+- Parameterized Tests with JUnit 5: https://mikemybytes.com/2021/10/19/parameterize-like-a-pro-with-junit-5-csvsource/
+- Java Streams: https://stackify.com/streams-guide-java-8/
+- MVC Pattern in Java: https://www.youtube.com/watch?v=ncW5tO3vBMQ
