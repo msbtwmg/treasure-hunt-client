@@ -8,8 +8,8 @@ This university project is the client side of a treasure hunt game made as part 
 - Algorithms: Dijkstra shortest path, Flood Fill
 - Network: Client-Server communication 
 - Testing: Unit tests, parameterized tests, mocking (Mockito) 
-- Code Quality: Refactoring, logging, exception handling
-- Software Design : CLI Visualisation, low coupling and high cohesion
+- Code Quality: Refactoring, logging, exception handling,
+- Software Design : CLI Visualisation, low coupling and high cohesion,  Single Responsibility 
 
 
 
